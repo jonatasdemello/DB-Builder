@@ -1,0 +1,5 @@
+*       text eol=lf
+*.csv   text eol=lf
+*.sh    text eol=lf
+
+git config core.autocrlf true
