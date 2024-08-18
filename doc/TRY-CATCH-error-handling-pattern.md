@@ -17,5 +17,3 @@ BEGIN CATCH
     THROW; -- Rethrow Exception
 END CATCH 
 ```
-
-See CoursePlanner.DiplomaClone for a real example. 
