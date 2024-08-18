@@ -1,0 +1,1 @@
+.\CreateDatabase.ps1 -server 127.0.0.1 -database Test_123 -username sa -password "P@ssw0rd.2022" -Force
