@@ -2,7 +2,7 @@
 
 Database Build Tool
 
-(Unit Tests)[UnitTest.md]
+Check this file for [Unit Tests](./doc/UnitTest.md)
 
 
 Links:
