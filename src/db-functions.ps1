@@ -219,6 +219,7 @@ function DeploySqlFolder {
 			$master = ""
 			Get-Childitem -Path $dest -Recurse | ForEach-Object {
 				$filesInFolder += 1
+				# $master += "print `' file: [$_]`' `nGO `n"
 				$master += ":r $_ `nGO `n"
 			}
 			# save file with all "sqlcmd commands"

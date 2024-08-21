@@ -76,11 +76,11 @@ AS
   RETURN CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS NVARCHAR(MAX)),4) AS INT);
 GO
 
-DECLARE @Version INT;
-EXEC @Version = #Private_GetSQLProductMajorVersion;
-PRINT 'SQLProductMajorVersion:'
-PRINT @Version;
-GO
+-- DECLARE @Version INT;
+-- EXEC @Version = #Private_GetSQLProductMajorVersion;
+-- PRINT 'SQLProductMajorVersion:'
+-- PRINT @Version;
+-- GO
 
 
 IF OBJECT_ID('tempdb..#RemoveAssemblyKey') IS NOT NULL DROP PROCEDURE #RemoveAssemblyKey;
