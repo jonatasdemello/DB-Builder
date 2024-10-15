@@ -4,28 +4,29 @@
 # add some space before starting (not essential, nice to have)
 write-host "`n`n"
 
-# we need the SqlCmd tools in order to run T-SQL
-Set-Variable -Name cmd -Value "sqlcmd" -Scope Global
-
-# set paths to make it easier to work on multiple platforms
+# global variables:
+# -----------------------------------------------------------------------------
+# set paths to make it easier to work on multiple platforms (linux/windows)
 $dbPath = (Get-Location).Path
 $tmpPath = Join-Path $dbPath -ChildPath "temp"
 
-# create temp folder to store output
-New-Item -ItemType Directory -Force -Path $tmpPath | Out-Null
-
-# global number of files executed for debug
+# SqlCmd tools path in order to run T-SQL scripts
+Set-Variable -Name cmd -Value "sqlcmd" -Scope Global
+Set-Variable -Name IsReady -Value $False -Scope Global
 Set-Variable -Name totalFiles -Value 0 -Scope Global
 Set-Variable -Name subtotalFiles -Value 0 -Scope Global
 
-# debug
-Write-Verbose "dbPath: $dbPath"
-Write-Verbose "tmpPath: $tmpPath"
+$StopWatch = new-object system.diagnostics.stopwatch
+$benchmark = @{
+	startTime = $null
+	endTime = $null
+	total = 0
+}
 
 # ---------------------------------------------------------------------------------------------------
 # Log output wrapper (create our customized format)
 function Write-Log {
-	param( $category="INFO", $msg="" , $fgColor="White", $bgColor="Black" )
+	param ( $category="INFO", $msg="" , $fgColor="White", $bgColor="Black" )
 
 	$date =  Get-Date -format "yyyy-MM-dd HH:mm:ss.ff"
 	Write-Host "$date  [$category] `t $msg" -ForegroundColor $fgColor -BackgroundColor $bgColor
@@ -41,16 +42,16 @@ function InstallSqlCmdTools {
 
 # Fail build if something is wrong
 function FailBuild {
-	param(
-		$exitcode
+	param (
+		$exitcode = 1
 	)
 	# $LastExitCode is the return code of native applications.
 	# $? just returns True or False depending on whether the last command (cmdlet or native) exited without error or not.
 
 	Write-Log "ERROR" "`n`n * * * Build failed with exit code: $exitcode * * * `n`n"
 
-	$global:LASTEXITCODE = 15
-	exit 15
+	$global:LASTEXITCODE = 1
+	exit 1
 }
 
 # Find where/if SQL tools are installed and set path to global variable $global:cmd
@@ -98,9 +99,35 @@ function FindSqlTools {
 	# later we can improve this to install necessary tools...
 }
 
+# Start SQL Server on Linux
+function StartSQLServer {
+	# note: for docker builds, we need to start SQL Server
+	# Use the Start verb to begin asynchronous operations, such as starting an autonomous process.
+	if ($IsLinux) {
+		Write-Host "... start SQL Server on Linux"
+		Start-Process -NoNewWindow "/opt/mssql/bin/sqlservr"
+	}
+}
+
+# Test to make sure SQL Server is up and running
+function WaitForSqlStart {
+	# Note: $cmd must be set (call "FindSqlTools" before)
+	$params = "-Q `"SELECT GETDATE()`" -S $SQLServer $SQLcredential -d master -C "
+
+	for ($i = 1; $i -le 10; $i++) {
+		Start-Sleep -Seconds 10
+		Write-Host "... check if SQL Server is running"
+		$process = Start-Process $cmd -ArgumentList $params -PassThru -Wait -NoNewWindow
+		$process.WaitForExit();
+		if ($process.ExitCode -eq 0) {
+			break
+		}
+	}
+}
+
 # Deploy/execute/run sql command(s) inside a file
 function DeploySqlFile {
-	param(
+	param (
 		[string]$file,
 		[string]$database=""
 	)
@@ -116,11 +143,11 @@ function DeploySqlFile {
 
 	if (!$database) # we don't have the -d Database parameter (-v var=value is fine)
 	{
-		$params = "-i $file -S $SQLServer $SQLcredential -v databasename=$SQLDBName -I -b -V 1 -m11 -f 65001 "
+		$params = "-i $file -S $SQLServer $SQLcredential -v databasename=$SQLDBName -C -I -b -V 1 -m11 -f 65001 "
 	}
 	else # we have the -d Database parameter
 	{
-		$params = "-i $file -S $SQLServer $SQLcredential -d $SQLDBName -v databasename=$SQLDBName -I -b -V 1 -m11 -f 65001 "
+		$params = "-i $file -S $SQLServer $SQLcredential -d $SQLDBName -v databasename=$SQLDBName -C -I -b -V 1 -m11 -f 65001 "
 	}
 	# NOTE: these parameters were there before to output errors
 	# -r0 -I -m11 -b -V 1
@@ -134,7 +161,7 @@ function DeploySqlFile {
 
 			$process.WaitForExit();
 			if ($process.ExitCode -ne 0) {
-				Write-Log "ERROR" "`n`n * * * Error: $file `n`n"
+				Write-Log "ERROR" "`n`n * * * Error file: $file `n`n"
 				FailBuild $process.ExitCode
 			}
 		}
@@ -149,7 +176,7 @@ function DeploySqlFile {
 			# an array means something went wrong
 			if($isArray){
 				$text = ( $result -join "`n")
-				Write-Log "ERROR" "`n`n* * * Error: $file `n$text `n`n"
+				Write-Log "ERROR" "`n`n* * * Error file: $file `n$text `n`n"
 				FailBuild
 			}
 		}
@@ -166,7 +193,7 @@ function DeploySqlFile {
 
 # Deploy/execute/run just One .sql file inside a folder
 function DeploySqlFolderFile {
-	param(
+	param (
 		[string]$folder,
 		[string]$file,
 		[string]$database
@@ -181,7 +208,7 @@ function DeploySqlFolderFile {
 
 # Deploy/execute/run All .sql files inside a folder (recursive - include sub-folders)
 function DeploySqlFolder {
-	param(
+	param (
 		[string]$folder,
 		[string]$database
 	)
@@ -199,17 +226,16 @@ function DeploySqlFolder {
 		$dest = Join-Path $folder -ChildPath "*.sql"
 
 		$debug = $False
-		if ("Continue" -eq $VerbosePreference) {
+		if (("Continue" -eq $VerbosePreference) -or ("UpgradeScripts" -eq $folder)) {
 			$debug = $True
 		}
 
 		if ($debug) {
 		# v1: run each sql file one by one (this is slower but makes it easier to find errors)
 		Get-Childitem -Path $dest -Recurse | ForEach-Object {
-			# debug for Upgrade scrits (most probable failure point)
-				# if("UpgradeScripts" -eq $folder){
-				# 	Write-Log "INFO" "   . file: $_" -fgColor DarkYellow
-				# }
+					if ("UpgradeScripts" -eq $folder){
+						Write-Log "INFO" "   . file: $_" -fgColor DarkYellow
+					}
 			DeploySqlFile -file $_ -database "$database" # send DB name here
 			$filesInFolder += 1
 		}
@@ -219,7 +245,6 @@ function DeploySqlFolder {
 			$master = ""
 			Get-Childitem -Path $dest -Recurse | ForEach-Object {
 				$filesInFolder += 1
-				# $master += "print `' file: [$_]`' `nGO `n"
 				$master += ":r $_ `nGO `n"
 			}
 			# save file with all "sqlcmd commands"
@@ -241,7 +266,7 @@ function DeploySqlFolder {
 
 # Check for invalid file names with spaces or dots (could cause errors on build)
 function ValidateFileNames {
-	param( [string]$database )
+	param ( [string]$database )
 
 	# check files names with spaces
 	$filenameWithSpaces = Get-Childitem "* *.sql" -recurse
@@ -266,7 +291,7 @@ function ValidateFileNames {
 	}
 
 	# only check files in the DB build folders
-	$exclude = @("*.sql","*.bat","*.ps1","*.zip","*.txt","*.md","*.cs",".git",".github",".vscode",".idea","*.json","*.nuspec")
+	$exclude = @("*.sql","*.bat","*.ps1","*.zip","*.txt","*.md","*.cs",".git",".github",".vscode",".idea","*.json","*.nuspec","*.cmd","*.sqlcmd")
 	$buildFolders = @("Assemblies", "Data", "ForeignKeys", "Functions", "Schemas", "Security", "Sequences", "StoredProcedures", "Synonyms", "Tables", "Types", "UnitTests", "UpgradeScripts", "UtilScripts", "Views")
 	foreach($folder in $buildFolders) {
 
@@ -286,25 +311,23 @@ function ValidateFileNames {
 
 # Delete temporary work files
 function RemoveFile {
-	param( [string]$fileName )
+	param ( [string]$fileName )
 
-	If (Test-Path $fileName) {
+	If (Test-Path -Path $fileName) {
 		Remove-Item $fileName -Force | Out-Null
 	}
 }
 
 # Delete existing Database (to create a new one)
 function RemoveDatabase {
-	param( [string]$database )
+	Write-Log "INFO" "--- DROP database [$SQLDBName] if exists ---" -fgColor DarkYellow -bgColor Black
 
-	Write-Log "INFO" "--- DROP database [$database] if exists ---" -fgColor DarkYellow -bgColor Black
-
-	DeploySqlFolderFile -folder "Build" -file "DropDatabase.sql" -database "$database"
+	DeploySqlFolderFile -folder "Build" -file "DropDatabase.sql" -database "$SQLDBName"
 }
 
 # Check if a Database Exists
 function TestDatabaseExists {
-	param( [string]$database )
+	param ( [string]$database )
 
 	Write-Log "INFO" "--- Check if database [$database] exists ---" -fgColor DarkYellow -bgColor Black
 
@@ -313,7 +336,7 @@ function TestDatabaseExists {
 	RemoveFile $tmpfile
 
 	$sql = "SELECT LEFT(name, 50) AS dbName FROM master.sys.databases WHERE name = '" + $database +"'";
-	$params = "-I -Q `"$sql`" -S $SQLServer $SQLcredential -r0 -I -m11 -b -V 1 -o $tmpfile"
+	$params = "-I -Q `"$sql`" -S $SQLServer $SQLcredential -C -r0 -I -m11 -b -V 1 -o $tmpfile"
 
 	$process = Start-Process $cmd -ArgumentList $params -PassThru -Wait -NoNewWindow
 	$process.WaitForExit();
@@ -342,55 +365,44 @@ function TestDatabaseExists {
 	}
 }
 
-# Create a new database + logins + linked server
-# Important: DatabaseSetup.sql DROP DATABASE if already exists
+# Initial Database Setup: create a new database + logins + linked server
 function InitializeDatabase {
-	param( [string]$database )
-	# Initial Database setup:
-	# ------------------------------------------------------------------
-	# IMPORTANT: the DB has not been created yet, so we can't use -d database param
+	# IMPORTANT:
+	#    - the "DatabaseSetup.sql" script DROPs the database if already exists!
+	#    - the database has not been created yet, so we can't use "-d database" param here!
 
-	# Create Logins
 	Write-Log "INFO" "--- Create Login ---" -fgColor DarkYellow -bgColor Black
 	DeploySqlFolderFile -folder "Build" -file "create-login.sql" -database ""
 
-	# Create Linked Server
-	# Write-Log "INFO" "--- Create Linked Server ---" -fgColor DarkYellow -bgColor Black
-	# DeploySqlFolderFile -folder "Build" -file "create-linked-server.sql" -database ""
+	Write-Log "INFO" "--- Create Linked Server ---" -fgColor DarkYellow -bgColor Black
+	DeploySqlFolderFile -folder "Build" -file "create-linked-server.sql" -database ""
 
-	# Create Database now
-	Write-Log "INFO" "--- Create Database $SQLDBName ---" -fgColor DarkYellow -bgColor Black
+	Write-Log "INFO" "--- Database Setup $SQLDBName ---" -fgColor DarkYellow -bgColor Black
 	DeploySqlFolderFile -folder "Build" -file "DatabaseSetup.sql" -database ""
+}
+
+# Prepare Unit Test Framework (tSQLt)
+function InitializetSQLt {
+	Write-Log "INFO" "--- Create tSQLt unit test framework ---" -fgColor DarkYellow -bgColor Black
+
+	DeploySqlFolderFile -folder "UnitTests" -file "01_PrepareServer.sql" -database "$SQLDBName"
+	DeploySqlFolderFile -folder "UnitTests" -file "02_tSQLt_class.sql" -database "$SQLDBName"
+	DeploySqlFolderFile -folder "UnitTests" -file "03_RunTests.sql" -database "$SQLDBName"
 }
 
 # Make sure the dbo.Provision(*) sprocs exist
 function InitializeProvisionSproc {
-	param( [string]$database )
-	# we need to specify the -d database param here
-
 	Write-Log "INFO" "--- Create Provision Procedures ---" -fgColor DarkYellow -bgColor Black
 
-	DeploySqlFolderFile -folder "Build" -file "001_ProvisionScalarFunction.sql" -database $database
-	DeploySqlFolderFile -folder "Build" -file "001_ProvisionTableFunction.sql" -database $database
-	DeploySqlFolderFile -folder "Build" -file "001_ProvisionSproc.sql" -database $database
-	DeploySqlFolderFile -folder "Build" -file "001_ProvisionView.sql" -database $database
-}
-
-# Prepare Unit Test Framework
-function InitializetSQLt {
-	param( [string]$database )
-	# we need to specify the -d database param here
-
-	Write-Log "INFO" "--- Create tSQLt unit test framework ---" -fgColor DarkYellow -bgColor Black
-
-	DeploySqlFolderFile -folder "UnitTests" -file "01_PrepareServer.sql" -database $database
-	DeploySqlFolderFile -folder "UnitTests" -file "02_tSQLt_class.sql" -database $database
-	DeploySqlFolderFile -folder "UnitTests" -file "03_RunTests.sql" -database $database
+	DeploySqlFolderFile -folder "Build" -file "001_ProvisionScalarFunction.sql" -database "$SQLDBName"
+	DeploySqlFolderFile -folder "Build" -file "001_ProvisionTableFunction.sql" -database "$SQLDBName"
+	DeploySqlFolderFile -folder "Build" -file "001_ProvisionSproc.sql" -database "$SQLDBName"
+	DeploySqlFolderFile -folder "Build" -file "001_ProvisionView.sql" -database "$SQLDBName"
 }
 
 # Set parameters as global variables (since they don't change it, so we can use it everywhere)
 function SetVariables {
-	param(
+	param (
 		[string]$Server,
 		[string]$Database,
 		[string]$Username,
@@ -420,54 +432,45 @@ function SetVariables {
 	}
 }
 
-# Create a new database
-function NewDatabase {
-	param(
+# Prepare the environment first: Prepares a resource for use, and sets it to a default state.
+function InitializeEnvironment {
+	param (
 		[Parameter(Mandatory=$true)]
 		[string]$Server,
 		[Parameter(Mandatory=$true)]
 		[string]$Database,
 		[string]$Username,
-		[string]$Password,
-		[System.Boolean]$Force = $False
+		[string]$Password
 	)
+	Write-Log "INFO" "--- Initializing Environment" -fgColor DarkYellow -bgColor Black
+
+	# only run once
+	if ($IsReady) {
+		return;
+	}
+	# create temp folder to store working files
+	If ( !(Test-Path -Path $tmpPath)) {
+		New-Item -ItemType Directory -Force -Path $tmpPath | Out-Null
+	}
+
 	# set default global variables so we don't need to send it every time
 	SetVariables -Server $Server -Database $Database -User $Username -Pass $Password
-
-	Write-Log "INFO" " "
-	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" "    [Create Database]   server: $SQLServer   database: $SQLDBName" -fgColor DarkGreen
-	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" " "
-
-	# check for invalid file names (that could break the build)
-	ValidateFileNames
 
 	# make sure we have the tools we need installed:
 	FindSqlTools
 
-	# Remove Database if Exists
-	if ($Force) {
-		RemoveDatabase -database $SQLDBName
-	 }
+	# check for invalid file names (that could break the build)
+	ValidateFileNames
 
-	# Check if Database Exists
-	$dbExists = TestDatabaseExists -database "$SQLDBName"
-	if ( $dbExists ) {
-		Write-Log "ERROR" "  Database [$SQLDBName] already exists! Drop it first." -fgColor Red
-		FailBuild
-	}
+	# check if SQL Server is running
+	WaitForSqlStart
 
-	#benchmark
-	$sw = [system.diagnostics.stopwatch]::StartNew()
-	$startTime =  Get-Date
+	# set as true, so it doesn't run again
+	$global:IsReady = $True
+}
 
-	# create logins, linked server and Database (IMPORTANT: don't sent the Database name here!)
-	InitializeDatabase -database ""
-
-	# make sure the dbo.Provision(*) sprocs exist
-	InitializeProvisionSproc -database "$SQLDBName"
-
+# Create Database objects (tables, functions, views, stored procedures)
+function DeployBuildFolders {
 	# ---------------------------------------------------------------------------------------------------
 	# DB Build Process starts here.
 	# To create the database we run the scrits in those folders (in order):
@@ -484,7 +487,10 @@ function NewDatabase {
 	DeploySqlFolder -folder "Views" -database "$SQLDBName"
 	DeploySqlFolder -folder "StoredProcedures" -database "$SQLDBName"
 	DeploySqlFolder -folder "Security" -database "$SQLDBName"
+}
 
+# Add seed and test data
+function DeployDataFolders {
 	# ---------------------------------------------------------------------------------------------------
 	# Build data folders
 	Write-Log "INFO" "--- Create Data ---" -fgColor DarkYellow -bgColor Black
@@ -494,63 +500,9 @@ function NewDatabase {
 
 	DeploySqlFolder -folder $DataDefault -database "$SQLDBName"
 	DeploySqlFolder -folder $DataTestData -database "$SQLDBName"
-
-	# DB Build Process ends here.
-	# ---------------------------------------------------------------------------------------------------
-
-	# benchmark
-	$sw.Stop(); $total = $sw.Elapsed; $sw.Reset();
-	$endTime =  Get-Date
-
-	Write-Log "INFO" " "
-	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" "    [Database Created]    Server: $SQLServer    Database: $SQLDBName" -fgColor DarkGreen
-	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" " "
-	Write-Log "INFO" " ... Benchmark: " -fgColor DarkCyan
-	Write-Log "INFO" " ...   Total Time: $total" -fgColor DarkCyan
-	Write-Log "INFO" " ...   Total Files: $totalFiles / $subtotalFiles" -fgColor DarkCyan
-	Write-Log "INFO" " ...   Start: $startTime" -fgColor DarkCyan
-	Write-Log "INFO" " ...   Stop : $endTime" -fgColor DarkCyan
 }
 
-# Upgrade an existing database, (DB must already exists)
-function UpdateDatabase {
-	param(
-		[Parameter(Mandatory=$true)]
-		[string]$Server,
-		[Parameter(Mandatory=$true)]
-		[string]$Database,
-		[string]$Username,
-		[string]$Password
-	)
-
-	# set default global variables so we don't need to send it every time
-	SetVariables -Server $Server -Database $Database -User $Username -Pass $Password
-
-	Write-Log "INFO" " "
-	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" "    [Upgrade Database]    Server: $SQLServer    Database: $SQLDBName" -fgColor DarkGreen
-	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" " "
-
-	# check for invalid file names (that could break the build)
-	ValidateFileNames
-
-	# make sure we have the tools we need installed:
-	FindSqlTools
-
-	# Check if Database Exists
-	$dbExists = TestDatabaseExists -database "$SQLDBName"
-	if (-not $dbExists ) {
-		Write-Log "ERRROR" "  Database [$SQLDBName] NOT found. Create the database first."
-		FailBuild
-	}
-
-	# benchmark
-	$sw = [system.diagnostics.stopwatch]::StartNew();
-	$startTime =  Get-Date
-
+function DeployUpgradeFolders {
 	# ---------------------------------------------------------------------------------------------------
 	# DB Build Process starts here.
 	# To update the database we run the scrits in those folders (in order):
@@ -561,24 +513,142 @@ function UpdateDatabase {
 	DeploySqlFolder -folder "Functions" -database "$SQLDBName"
 	DeploySqlFolder -folder "Views" -database "$SQLDBName"
 	DeploySqlFolder -folder "StoredProcedures" -database "$SQLDBName"
+}
 
-	# DB Build Process ends here.
-	# ---------------------------------------------------------------------------------------------------
-
-	# benchmark
-	$sw.Stop(); $total = $sw.Elapsed; $sw.Reset();
-	$endTime =  Get-Date
-
+function WriteHeader {
+	param (
+		$action
+	)
 	Write-Log "INFO" " "
 	Write-Log "INFO" "-----------------------------------------------------------------------"
-	Write-Log "INFO" "    [Database Upgraded]    Server: $SQLServer    Database: $SQLDBName" -fgColor DarkGreen
+	Write-Log "INFO" "    [$action]   server: $SQLServer   database: $SQLDBName" -fgColor DarkGreen
 	Write-Log "INFO" "-----------------------------------------------------------------------"
 	Write-Log "INFO" " "
+}
+
+function WriteFooter {
+	param (
+		$action
+	)
+	Write-Log "INFO" " "
+	Write-Log "INFO" "-----------------------------------------------------------------------"
+	Write-Log "INFO" "    [$action]   server: $SQLServer   database: $SQLDBName" -fgColor DarkGreen
+	Write-Log "INFO" "-----------------------------------------------------------------------"
+	Write-Log "INFO" " "
+}
+
+function WriteBenchmark {
+
+	$bkstart = $benchmark['startTime']
+	$bkstop =  $benchmark['endTime']
+	$bktotal = $benchmark['total']
+
 	Write-Log "INFO" " ... Benchmark: " -fgColor DarkCyan
-	Write-Log "INFO" " ...   Total Time: $total" -fgColor DarkCyan
-	Write-Log "INFO" " ...   Total Files: $totalFiles / $subtotalFiles" -fgColor DarkCyan
-	Write-Log "INFO" " ...   Start: $startTime" -fgColor DarkCyan
-	Write-Log "INFO" " ...   Stop : $endTime" -fgColor DarkCyan
+	Write-Log "INFO" " ...   Start Time  : $bkstart" -fgColor DarkCyan
+	Write-Log "INFO" " ...   Stop Time   : $bkstop" -fgColor DarkCyan
+	Write-Log "INFO" " ...   Total Time  : $bktotal" -fgColor DarkCyan
+	Write-Log "INFO" " ...   Total Files : $totalFiles / $subtotalFiles" -fgColor DarkCyan
+}
+
+function StartBenchmark {
+
+	$StopWatch.Reset()
+	$StopWatch.Start()
+
+	$benchmark['startTime'] = Get-Date
+	$benchmark['endTime'] = $null
+	$benchmark['total'] = 0
+}
+
+function StopBenchmark {
+
+	$StopWatch.Stop();
+
+	$benchmark['endTime'] = Get-Date
+	$benchmark['total'] = $StopWatch.Elapsed;
+}
+
+# Check if Database Exists
+function CheckDatabase {
+	param (
+		[bool]$MustExist
+	)
+	$dbExists = TestDatabaseExists -database "$SQLDBName"
+
+	if ( $dbExists -and -not $MustExist) {
+		Write-Log "ERROR" "  Database [$SQLDBName] already exists! Drop the database first." -fgColor Red
+		FailBuild
+	}
+
+	if (-not $dbExists -and $MustExist) {
+		Write-Log "ERRROR" "  Database [$SQLDBName] NOT found. Create the database first."
+		FailBuild
+	}
+}
+
+# Create a new database
+function NewDatabase {
+	param (
+		[Parameter(Mandatory=$true)]
+		[string]$Server,
+		[Parameter(Mandatory=$true)]
+		[string]$Database,
+		[string]$Username,
+		[string]$Password,
+		[System.Boolean]$Force = $False
+	)
+
+	InitializeEnvironment -Server $Server -Database $Database -User $Username -Pass $Password
+
+	if ($Force) {
+		RemoveDatabase
+	 }
+
+	StartBenchmark
+
+	WriteHeader "Create Database"
+
+	CheckDatabase -MustExist $false
+
+	InitializeDatabase
+
+	InitializeProvisionSproc
+
+	DeployBuildFolders
+
+	DeployDataFolders
+
+	WriteFooter "Database Created"
+
+	StopBenchmark
+	WriteBenchmark
+}
+
+# Upgrade an existing database, (DB must already exists)
+function UpdateDatabase {
+	param (
+		[Parameter(Mandatory=$true)]
+		[string]$Server,
+		[Parameter(Mandatory=$true)]
+		[string]$Database,
+		[string]$Username,
+		[string]$Password
+	)
+
+	InitializeEnvironment -Server $Server -Database $Database -User $Username -Pass $Password
+
+	StartBenchmark
+
+	WriteHeader "Upgrade Database"
+
+	CheckDatabase -MustExist $true
+
+	DeployUpgradeFolders
+
+	WriteFooter "Database Upgraded"
+
+	StopBenchmark
+	WriteBenchmark
 }
 
 # ---------------------------------------------------------------------------------------------------
