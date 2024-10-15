@@ -17,15 +17,15 @@ param (
 )
 
 # build the database only
-docker image build --progress=plain -t Local_DB:1.0.0 -f dockerfile .
+docker image build --progress=plain -t local_db:1.0.0 -f dockerfile .
 
 if ($run) {
 	# run the container and keep runnning
-	docker run -p 1433:1433 --name localdb -it Local_DB:1.0.0
+	docker run -p 1433:1433 --name localdb -it local_db:1.0.0
 }
 
 if ($clean) {
 	# REMOVE CONTAINER & IMAGE
 	docker container rm localdb -f
-	docker image rm Local_DB:1.0.0 -f
+	docker image rm local_db:1.0.0 -f
 }

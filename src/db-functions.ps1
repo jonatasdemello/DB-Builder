@@ -374,8 +374,8 @@ function InitializeDatabase {
 	Write-Log "INFO" "--- Create Login ---" -fgColor DarkYellow -bgColor Black
 	DeploySqlFolderFile -folder "Build" -file "create-login.sql" -database ""
 
-	Write-Log "INFO" "--- Create Linked Server ---" -fgColor DarkYellow -bgColor Black
-	DeploySqlFolderFile -folder "Build" -file "create-linked-server.sql" -database ""
+	# Write-Log "INFO" "--- Create Linked Server ---" -fgColor DarkYellow -bgColor Black
+	# DeploySqlFolderFile -folder "Build" -file "create-linked-server.sql" -database ""
 
 	Write-Log "INFO" "--- Database Setup $SQLDBName ---" -fgColor DarkYellow -bgColor Black
 	DeploySqlFolderFile -folder "Build" -file "DatabaseSetup.sql" -database ""
