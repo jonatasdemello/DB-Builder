@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-   Create and Upgrade CC3 Database Using Powershell
+   Create and Upgrade Database Using Powershell
 .DESCRIPTION
    For debug details, run with: -verbose
    Parameters:
