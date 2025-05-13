@@ -9,19 +9,19 @@ AS
 BEGIN
 	-- sysname = nvarchar(128) NOT NULL
 	declare @TableName nvarchar(255) = @TName
-	
+
 	declare @Result varchar(max) = '
 	public class ' + @TableName + '
 	{'
-	
+
 	select @Result = @Result + '
 		public ' + ColumnType + NullableSign + ' ' + ColumnName + ' { get; set; }'
 	from
 	(
-		select 
+		select
 			replace(col.name, ' ', '_') ColumnName,
 			column_id ColumnId,
-			case typ.name 
+			case typ.name
 				when 'bigint' then 'long'
 				when 'binary' then 'byte[]'
 				when 'bit' then 'bool'
@@ -52,14 +52,14 @@ BEGIN
 				when 'varchar' then 'string'
 				else 'UNKNOWN_' + typ.name
 			end ColumnType,
-			case 
-				when col.is_nullable = 1 and typ.name in ('bigint', 'bit', 'date', 'datetime', 'datetime2', 'datetimeoffset', 'decimal', 'float', 'int', 'money', 'numeric', 'real', 'smalldatetime', 'smallint', 'smallmoney', 'time', 'tinyint', 'uniqueidentifier') 
-				then '?' 
-				else '' 
+			case
+				when col.is_nullable = 1 and typ.name in ('bigint', 'bit', 'date', 'datetime', 'datetime2', 'datetimeoffset', 'decimal', 'float', 'int', 'money', 'numeric', 'real', 'smalldatetime', 'smallint', 'smallmoney', 'time', 'tinyint', 'uniqueidentifier')
+				then '?'
+				else ''
 			end NullableSign
 		from sys.columns col
 			join sys.types typ on col.system_type_id = typ.system_type_id AND col.user_type_id = typ.user_type_id
-		where 
+		where
 			object_id = object_id(@TableName)
 	) t
 	order by ColumnId

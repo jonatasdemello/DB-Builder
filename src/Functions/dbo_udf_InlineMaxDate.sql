@@ -1,5 +1,5 @@
 EXEC dbo.ProvisionScalarFunction 'dbo', 'udf_InlineMaxDate'
-GO 
+GO
 
 ALTER FUNCTION dbo.udf_InlineMaxDate(@Val1 datetime2, @Val2 datetime2)
 RETURNS datetime2

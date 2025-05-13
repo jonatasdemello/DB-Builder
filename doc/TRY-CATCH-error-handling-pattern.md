@@ -15,5 +15,5 @@ BEGIN CATCH
         ROLLBACK TRANSACTION;
 
     THROW; -- Rethrow Exception
-END CATCH 
+END CATCH
 ```

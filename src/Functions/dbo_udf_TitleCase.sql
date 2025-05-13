@@ -1,5 +1,5 @@
 IF EXISTS(SELECT * FROM information_schema.routines WHERE routine_type = 'function' AND routine_schema = 'dbo' AND routine_name = 'udf_TitleCase')
-BEGIN 
+BEGIN
 	DROP FUNCTION [dbo].[udf_TitleCase]
 END
 GO
@@ -8,7 +8,7 @@ CREATE FUNCTION [dbo].[udf_TitleCase]
 (
 	@string NVARCHAR(MAX)
 )
-RETURNS NVARCHAR(MAX) 
+RETURNS NVARCHAR(MAX)
 AS
 BEGIN
 	IF (@string IS NULL)
@@ -27,7 +27,7 @@ BEGIN
 		SET @char = SUBSTRING(@string, @index, 1)
 		SET @prevChar =
 		(
-			SELECT 
+			SELECT
 			CASE
 				WHEN @index = 1 THEN ''
 				ELSE SUBSTRING(@string, @index - 1, 1)
@@ -45,7 +45,7 @@ BEGIN
 
     	SET @index = @index + 1
     END
-    
+
     RETURN @outString
 END
 GO

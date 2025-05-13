@@ -58,7 +58,7 @@ SELECT
       ELSE ''
     END+
     'DROP ' +
-    CASE @ItemType 
+    CASE @ItemType
       WHEN 'F' THEN 'CONSTRAINT'
       WHEN 'IF' THEN 'FUNCTION'
       WHEN 'TF' THEN 'FUNCTION'
@@ -73,7 +73,7 @@ SELECT
       WHEN 'xml_schema_collection' THEN 'XML SCHEMA COLLECTION'
       WHEN 'schema' THEN 'SCHEMA'
      END+
-     ' ' + 
+     ' ' +
      CASE @ItemType
        WHEN 'F' THEN QUOTENAME(OBJECT_NAME(OBJECT_ID(@FullName)))
        ELSE @FullName
@@ -113,7 +113,7 @@ BEGIN
 
     WITH SchemaInfo(FullName, ItemType, SchemaId) AS
          (
-           SELECT 
+           SELECT
                QUOTENAME(S.name),
                'schema',
                S.schema_id
@@ -122,7 +122,7 @@ BEGIN
          ),
          ConstraintInfo(FullName, ItemType) AS
          (/*FOREIGN KEYS need to be dropped before their tables*/
-           SELECT 
+           SELECT
                QUOTENAME(SCHEMA_NAME(O.schema_id))+'.'+QUOTENAME(O.name),
                O.type
              FROM sys.objects AS O
@@ -131,7 +131,7 @@ BEGIN
          ),
          ObjectInfo(FullName, ItemType) AS
          (
-           SELECT 
+           SELECT
                QUOTENAME(SCHEMA_NAME(O.schema_id))+'.'+QUOTENAME(O.name),
                O.type
              FROM sys.objects AS O
@@ -140,7 +140,7 @@ BEGIN
          ),
          TypeInfo(FullName, ItemType) AS
          (
-           SELECT 
+           SELECT
                QUOTENAME(SCHEMA_NAME(T.schema_id))+'.'+QUOTENAME(T.name),
                'type'
              FROM sys.types AS T
@@ -148,7 +148,7 @@ BEGIN
          ),
          XMLSchemaInfo(FullName, ItemType) AS
          (
-           SELECT 
+           SELECT
                QUOTENAME(SCHEMA_NAME(XSC.schema_id))+'.'+QUOTENAME(XSC.name),
                'xml_schema_collection'
              FROM sys.xml_schema_collections AS XSC
@@ -179,7 +179,7 @@ BEGIN
             ORDER BY no
               FOR XML PATH(''), TYPE
          )
-    SELECT @Cmd = xml.value('/', 'NVARCHAR(MAX)') 
+    SELECT @Cmd = xml.value('/', 'NVARCHAR(MAX)')
       FROM StatementBlob;
 
     EXEC(@Cmd);
@@ -194,8 +194,8 @@ CREATE PROCEDURE tSQLt.Uninstall
 AS
 BEGIN
 
-  EXEC tSQLt.DropClass @ClassName = 'tSQLt';  
-  
+  EXEC tSQLt.DropClass @ClassName = 'tSQLt';
+
   IF(EXISTS(SELECT 1 FROM sys.assemblies WHERE name = 'tSQLtCLR'))DROP ASSEMBLY tSQLtCLR;
 
   IF USER_ID('tSQLt.TestClass') IS NOT NULL DROP USER [tSQLt.TestClass];
@@ -223,7 +223,7 @@ GO
 GO
 CREATE VIEW tSQLt.Tests
 AS
-  SELECT classes.SchemaId, classes.Name AS TestClassName, 
+  SELECT classes.SchemaId, classes.Name AS TestClassName,
          procs.object_id AS ObjectId, procs.name AS Name
     FROM tSQLt.TestClasses classes
     JOIN sys.procedures procs ON classes.SchemaId = procs.schema_id
@@ -300,7 +300,7 @@ AS
 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000+
 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000+
 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000+
-0x000000000000000000 
+0x000000000000000000
   ,@AssemblyKeyThumbPrint = 0xE8FFF6F136D7B53E ;
 GO
 
@@ -353,7 +353,7 @@ BEGIN
     DECLARE @AssemblyKeyBytes VARBINARY(MAX);
     EXEC tSQLt.Private_GetAssemblyKeyBytes @AssemblyKeyBytes = @AssemblyKeyBytes OUT;
     SELECT @TrustedHash = CONVERT(NVARCHAR(MAX),HASHBYTES('SHA2_512',@AssemblyKeyBytes),1);
-    SELECT @cmd = 
+    SELECT @cmd =
            'IF EXISTS(SELECT 1 FROM sys.trusted_assemblies WHERE hash = ' + @TrustedHash +' AND description = ''tSQLt Ephemeral'')'+
            'EXEC sys.sp_drop_trusted_assembly @hash = ' + @TrustedHash + ';';
     EXEC master.sys.sp_executesql @cmd;
@@ -390,7 +390,7 @@ BEGIN
   SET @cmd = 'IF EXISTS(SELECT * FROM sys.assemblies WHERE name = ''tSQLtAssemblyKey'') DROP ASSEMBLY tSQLtAssemblyKey;';
   EXEC @master_sys_sp_executesql @cmd;
 
-  SET @cmd2 = 'SELECT @cmd = ''DROP ASSEMBLY ''+QUOTENAME(A.name)+'';'''+ 
+  SET @cmd2 = 'SELECT @cmd = ''DROP ASSEMBLY ''+QUOTENAME(A.name)+'';'''+
               '  FROM master.sys.assemblies AS A'+
               ' WHERE A.clr_name LIKE ''tsqltassemblykey, %'';';
   EXEC sys.sp_executesql @cmd2,N'@cmd NVARCHAR(MAX) OUTPUT',@cmd OUT;
@@ -401,7 +401,7 @@ BEGIN
   BEGIN
     SELECT @Hash = HASHBYTES('SHA2_512',@AssemblyKeyBytes);
 
-    SELECT @cmd = 
+    SELECT @cmd =
            'IF NOT EXISTS (SELECT * FROM sys.trusted_assemblies WHERE [hash] = @Hash)'+
            'BEGIN'+
            '  EXEC sys.sp_add_trusted_assembly @hash = @Hash, @description = N''tSQLt Ephemeral'';'+
@@ -411,7 +411,7 @@ BEGIN
     EXEC @master_sys_sp_executesql @cmd, N'@Hash VARBINARY(64) OUTPUT',@Hash OUT;
   END;
 
-  SELECT @cmd = 
+  SELECT @cmd =
          'CREATE ASSEMBLY tSQLtAssemblyKey AUTHORIZATION dbo FROM ' +
          CONVERT(NVARCHAR(MAX),@AssemblyKeyBytes,1) +
          ' WITH PERMISSION_SET = SAFE;'
@@ -432,7 +432,7 @@ BEGIN
 
   SET @cmd = 'CREATE ASYMMETRIC KEY tSQLtAssemblyKey FROM ASSEMBLY tSQLtAssemblyKey;';
   EXEC @master_sys_sp_executesql @cmd;
- 
+
   SET @cmd = 'CREATE LOGIN tSQLtAssemblyKey FROM ASYMMETRIC KEY tSQLtAssemblyKey;';
   EXEC @master_sys_sp_executesql @cmd;
 
@@ -510,7 +510,7 @@ CREATE FUNCTION tSQLt.Private_QuoteClassNameForNewTestClass(@ClassName NVARCHAR(
   RETURNS NVARCHAR(MAX)
 AS
 BEGIN
-  RETURN 
+  RETURN
     CASE WHEN @ClassName LIKE '[[]%]' THEN @ClassName
          ELSE QUOTENAME(@ClassName)
      END;
@@ -531,7 +531,7 @@ BEGIN
     FROM sys.schemas
    WHERE QUOTENAME(name) = @QuotedClassName;
 
-  EXEC sp_addextendedproperty @name = N'tSQLt.TestClass', 
+  EXEC sp_addextendedproperty @name = N'tSQLt.TestClass',
                               @value = 1,
                               @level0type = 'SCHEMA',
                               @level0name = @UnquotedClassName;
@@ -540,7 +540,7 @@ BEGIN
   SELECT @UnquotedClassName
    WHERE NOT EXISTS
              (
-               SELECT * 
+               SELECT *
                  FROM tSQLt.Private_NewTestClassList AS NTC
                  WITH(UPDLOCK,ROWLOCK,HOLDLOCK)
                 WHERE NTC.ClassName = @UnquotedClassName
@@ -562,13 +562,13 @@ BEGIN
     DECLARE @QuotedClassName NVARCHAR(MAX);
     SELECT @QuotedClassName = tSQLt.Private_QuoteClassNameForNewTestClass(@ClassName);
 
-    EXEC ('CREATE SCHEMA ' + @QuotedClassName);  
+    EXEC ('CREATE SCHEMA ' + @QuotedClassName);
     EXEC tSQLt.Private_MarkSchemaAsTestClass @QuotedClassName;
   END TRY
   BEGIN CATCH
     DECLARE @ErrMsg NVARCHAR(MAX);SET @ErrMsg = ERROR_MESSAGE() + ' (Error originated in ' + ERROR_PROCEDURE() + ')';
     DECLARE @ErrSvr INT;SET @ErrSvr = ERROR_SEVERITY();
-    
+
     RAISERROR(@ErrMsg, @ErrSvr, 10);
   END CATCH;
 END;
@@ -624,7 +624,7 @@ BEGIN
         + COALESCE(@Message8, '!NULL!')
         + COALESCE(@Message9, '!NULL!')
         + @WarningMessage;
-        
+
    RAISERROR('tSQLt.Failure',16,10);
 END;
 
@@ -650,26 +650,26 @@ CREATE TABLE tSQLt.Run_LastExecution(
     LoginTime DATETIME
 );
 GO
-CREATE PROCEDURE tSQLt.Private_Print 
+CREATE PROCEDURE tSQLt.Private_Print
     @Message NVARCHAR(MAX),
     @Severity INT = 0
-AS 
+AS
 BEGIN
     DECLARE @SPos INT;SET @SPos = 1;
     DECLARE @EPos INT;
     DECLARE @Len INT; SET @Len = LEN(@Message);
     DECLARE @SubMsg NVARCHAR(MAX);
     DECLARE @Cmd NVARCHAR(MAX);
-    
+
     DECLARE @CleanedMessage NVARCHAR(MAX);
     SET @CleanedMessage = REPLACE(@Message,'%','%%');
-    
+
     WHILE (@SPos <= @Len)
     BEGIN
       SET @EPos = CHARINDEX(CHAR(13)+CHAR(10),@CleanedMessage+CHAR(13)+CHAR(10),@SPos);
       SET @SubMsg = SUBSTRING(@CleanedMessage, @SPos, @EPos - @SPos);
       SET @Cmd = N'RAISERROR(@Msg,@Severity,10) WITH NOWAIT;';
-      EXEC sp_executesql @Cmd, 
+      EXEC sp_executesql @Cmd,
                          N'@Msg NVARCHAR(MAX),@Severity INT',
                          @SubMsg,
                          @Severity;
@@ -683,7 +683,7 @@ GO
 
 CREATE PROCEDURE tSQLt.Private_PrintXML
     @Message XML
-AS 
+AS
 BEGIN
     SET NOCOUNT ON;
     SELECT CAST(@Message AS XML);--Required together with ":XML ON" sqlcmd statement to allow more than 1mb to be returned
@@ -715,7 +715,7 @@ BEGIN
                                     @level1name = 'Private_OutputTestResults';
     END;
 
-    EXEC sp_addextendedproperty @name = N'tSQLt.ResultsFormatter', 
+    EXEC sp_addextendedproperty @name = N'tSQLt.ResultsFormatter',
                                 @value = @Formatter,
                                 @level0type = 'SCHEMA',
                                 @level0name = 'tSQLt',
@@ -729,14 +729,14 @@ RETURNS NVARCHAR(MAX)
 AS
 BEGIN
     DECLARE @FormatterName NVARCHAR(MAX);
-    
+
     SELECT @FormatterName = CAST(value AS NVARCHAR(MAX))
     FROM sys.extended_properties
     WHERE name = N'tSQLt.ResultsFormatter'
       AND major_id = OBJECT_ID('tSQLt.Private_OutputTestResults');
-      
+
     SELECT @FormatterName = COALESCE(@FormatterName, 'tSQLt.DefaultResultFormatter');
-    
+
     RETURN @FormatterName;
 END;
 GO
@@ -764,12 +764,12 @@ RETURN
     WHERE ES.session_id = @@SPID;
 GO
 
-CREATE PROCEDURE tSQLt.Private_SaveTestNameForSession 
+CREATE PROCEDURE tSQLt.Private_SaveTestNameForSession
   @TestName NVARCHAR(MAX)
 AS
 BEGIN
   DELETE FROM tSQLt.Run_LastExecution
-   WHERE SessionId = @@SPID;  
+   WHERE SessionId = @@SPID;
 
   INSERT INTO tSQLt.Run_LastExecution(TestName, SessionId, LoginTime)
   SELECT TestName = @TestName,
@@ -792,7 +792,7 @@ RETURN WITH A(Cnt, SuccessCnt, SkippedCnt, FailCnt, ErrorCnt) AS (
                        ISNULL(SUM(CASE WHEN Result = 'Failure' THEN 1 ELSE 0 END), 0),
                        ISNULL(SUM(CASE WHEN Result = 'Error' THEN 1 ELSE 0 END), 0)
                   FROM tSQLt.TestResult
-                  
+
                 )
        SELECT 'Test Case Summary: ' + CAST(Cnt AS NVARCHAR) + ' test case(s) executed, '+
                   CAST(SuccessCnt AS NVARCHAR) + ' succeeded, '+
@@ -812,7 +812,7 @@ BEGIN
       RETURN 0;
 
     DECLARE @Msg NVARCHAR(MAX);
-    SELECT @Msg = 'Expected: <' + ISNULL(CAST(@Expected AS NVARCHAR(MAX)), 'NULL') + 
+    SELECT @Msg = 'Expected: <' + ISNULL(CAST(@Expected AS NVARCHAR(MAX)), 'NULL') +
                   '> but was: <' + ISNULL(CAST(@Actual AS NVARCHAR(MAX)), 'NULL') + '>';
     IF((COALESCE(@Message,'') <> '') AND (@Message NOT LIKE '% ')) SET @Message = @Message + ' ';
     EXEC tSQLt.Fail @Message, @Msg;
@@ -826,8 +826,8 @@ CREATE FUNCTION tSQLt.Private_GetCleanSchemaName(@SchemaName NVARCHAR(MAX), @Obj
 RETURNS NVARCHAR(MAX)
 AS
 BEGIN
-    RETURN (SELECT SCHEMA_NAME(schema_id) 
-              FROM sys.objects 
+    RETURN (SELECT SCHEMA_NAME(schema_id)
+              FROM sys.objects
              WHERE object_id = CASE WHEN ISNULL(@SchemaName,'') in ('','[]')
                                     THEN OBJECT_ID(@ObjectName)
                                     ELSE OBJECT_ID(@SchemaName + '.' + @ObjectName)
@@ -843,15 +843,15 @@ BEGIN
 END;
 GO
 
-CREATE FUNCTION tSQLt.Private_ResolveFakeTableNamesForBackwardCompatibility 
+CREATE FUNCTION tSQLt.Private_ResolveFakeTableNamesForBackwardCompatibility
  (@TableName NVARCHAR(MAX), @SchemaName NVARCHAR(MAX))
-RETURNS TABLE AS 
+RETURNS TABLE AS
 RETURN
   SELECT QUOTENAME(OBJECT_SCHEMA_NAME(object_id)) AS CleanSchemaName,
          QUOTENAME(OBJECT_NAME(object_id)) AS CleanTableName
      FROM (SELECT CASE
                     WHEN @SchemaName IS NULL THEN OBJECT_ID(@TableName)
-                    ELSE COALESCE(OBJECT_ID(@SchemaName + '.' + @TableName),OBJECT_ID(@TableName + '.' + @SchemaName)) 
+                    ELSE COALESCE(OBJECT_ID(@SchemaName + '.' + @TableName),OBJECT_ID(@TableName + '.' + @SchemaName))
                   END object_id
           ) ids;
 GO
@@ -890,8 +890,8 @@ GO
 CREATE FUNCTION [tSQLt].[F_Num](
        @N INT
 )
-RETURNS TABLE 
-AS 
+RETURNS TABLE
+AS
 RETURN WITH C0(c) AS (SELECT 1 UNION ALL SELECT 1),
             C1(c) AS (SELECT 1 FROM C0 AS A CROSS JOIN C0 AS B),
             C2(c) AS (SELECT 1 FROM C1 AS A CROSS JOIN C1 AS B),
@@ -910,13 +910,13 @@ BEGIN
   DECLARE @Cmd NVARCHAR(MAX),
           @SchemaName NVARCHAR(MAX),
           @TriggerName NVARCHAR(MAX);
-          
+
   SELECT @SchemaName = OBJECT_SCHEMA_NAME(ObjId),
          @ViewName = OBJECT_NAME(ObjId),
          @TriggerName = OBJECT_NAME(ObjId) + '_SetFakeViewOn'
     FROM (SELECT OBJECT_ID(@ViewName) AS ObjId) X;
 
-  SET @Cmd = 
+  SET @Cmd =
      'CREATE TRIGGER $$SCHEMA_NAME$$.$$TRIGGER_NAME$$
       ON $$SCHEMA_NAME$$.$$VIEW_NAME$$ INSTEAD OF INSERT AS
       BEGIN
@@ -924,16 +924,16 @@ BEGIN
          RETURN;
       END;
      ';
-      
+
   SET @Cmd = REPLACE(@Cmd, '$$SCHEMA_NAME$$', QUOTENAME(@SchemaName));
   SET @Cmd = REPLACE(@Cmd, '$$VIEW_NAME$$', QUOTENAME(@ViewName));
   SET @Cmd = REPLACE(@Cmd, '$$TRIGGER_NAME$$', QUOTENAME(@TriggerName));
   EXEC(@Cmd);
 
-  EXEC sp_addextendedproperty @name = N'SetFakeViewOnTrigger', 
+  EXEC sp_addextendedproperty @name = N'SetFakeViewOnTrigger',
                                @value = 1,
                                @level0type = 'SCHEMA',
-                               @level0name = @SchemaName, 
+                               @level0name = @SchemaName,
                                @level1type = 'VIEW',
                                @level1name = @ViewName,
                                @level2type = 'TRIGGER',
@@ -948,22 +948,22 @@ CREATE PROCEDURE [tSQLt].[SetFakeViewOn]
 AS
 BEGIN
   DECLARE @ViewName NVARCHAR(MAX);
-    
+
   DECLARE viewNames CURSOR LOCAL FAST_FORWARD FOR
   SELECT QUOTENAME(OBJECT_SCHEMA_NAME(object_id)) + '.' + QUOTENAME([name]) AS viewName
     FROM sys.views
    WHERE schema_id = SCHEMA_ID(@SchemaName);
-  
+
   OPEN viewNames;
-  
+
   FETCH NEXT FROM viewNames INTO @ViewName;
   WHILE @@FETCH_STATUS = 0
   BEGIN
     EXEC tSQLt.Private_SetFakeViewOn_SingleView @ViewName;
-    
+
     FETCH NEXT FROM viewNames INTO @ViewName;
   END;
-  
+
   CLOSE viewNames;
   DEALLOCATE viewNames;
 END;
@@ -976,16 +976,16 @@ BEGIN
   DECLARE @Cmd NVARCHAR(MAX),
           @SchemaName NVARCHAR(MAX),
           @TriggerName NVARCHAR(MAX);
-          
+
   SELECT @SchemaName = QUOTENAME(OBJECT_SCHEMA_NAME(ObjId)),
          @TriggerName = QUOTENAME(OBJECT_NAME(ObjId) + '_SetFakeViewOn')
     FROM (SELECT OBJECT_ID(@ViewName) AS ObjId) X;
-  
+
   SET @Cmd = 'DROP TRIGGER %SCHEMA_NAME%.%TRIGGER_NAME%;';
-      
+
   SET @Cmd = REPLACE(@Cmd, '%SCHEMA_NAME%', @SchemaName);
   SET @Cmd = REPLACE(@Cmd, '%TRIGGER_NAME%', @TriggerName);
-  
+
   EXEC(@Cmd);
 END;
 GO
@@ -995,23 +995,23 @@ CREATE PROCEDURE [tSQLt].[SetFakeViewOff]
 AS
 BEGIN
   DECLARE @ViewName NVARCHAR(MAX);
-    
+
   DECLARE viewNames CURSOR LOCAL FAST_FORWARD FOR
    SELECT QUOTENAME(OBJECT_SCHEMA_NAME(t.parent_id)) + '.' + QUOTENAME(OBJECT_NAME(t.parent_id)) AS viewName
      FROM sys.extended_properties ep
      JOIN sys.triggers t
        on ep.major_id = t.object_id
-     WHERE ep.name = N'SetFakeViewOnTrigger'  
+     WHERE ep.name = N'SetFakeViewOnTrigger'
   OPEN viewNames;
-  
+
   FETCH NEXT FROM viewNames INTO @ViewName;
   WHILE @@FETCH_STATUS = 0
   BEGIN
     EXEC tSQLt.Private_SetFakeViewOff_SingleView @ViewName;
-    
+
     FETCH NEXT FROM viewNames INTO @ViewName;
   END;
-  
+
   CLOSE viewNames;
   DEALLOCATE viewNames;
 END;
@@ -1035,7 +1035,7 @@ BEGIN
     SELECT TOP(1) schema_id
       FROM sys.schemas
      WHERE @SchemaName IN (name, QUOTENAME(name), QUOTENAME(name, '"'))
-     ORDER BY 
+     ORDER BY
         CASE WHEN name = @SchemaName THEN 0 ELSE 1 END
   );
 END;
@@ -1045,10 +1045,10 @@ CREATE FUNCTION tSQLt.Private_IsTestClass(@TestClassName NVARCHAR(MAX))
 RETURNS BIT
 AS
 BEGIN
-  RETURN 
-    CASE 
+  RETURN
+    CASE
       WHEN EXISTS(
-             SELECT 1 
+             SELECT 1
                FROM tSQLt.TestClasses
               WHERE SchemaId = tSQLt.Private_GetSchemaId(@TestClassName)
             )
@@ -1059,7 +1059,7 @@ END;
 GO
 
 CREATE FUNCTION tSQLt.Private_ResolveSchemaName(@Name NVARCHAR(MAX))
-RETURNS TABLE 
+RETURNS TABLE
 AS
 RETURN
   WITH ids(schemaId) AS
@@ -1070,18 +1070,18 @@ RETURN
          QUOTENAME(SCHEMA_NAME(schemaId))
          FROM ids
         )
-  SELECT schemaId, 
+  SELECT schemaId,
          quotedSchemaName,
          CASE WHEN EXISTS(SELECT 1 FROM tSQLt.TestClasses WHERE TestClasses.SchemaId = idsWithNames.schemaId)
                THEN 1
               ELSE 0
-         END AS isTestClass, 
+         END AS isTestClass,
          CASE WHEN schemaId IS NOT NULL THEN 1 ELSE 0 END AS isSchema
     FROM idsWithNames;
 GO
 
 CREATE FUNCTION tSQLt.Private_ResolveObjectName(@Name NVARCHAR(MAX))
-RETURNS TABLE 
+RETURNS TABLE
 AS
 RETURN
   WITH ids(schemaId, objectId) AS
@@ -1090,24 +1090,24 @@ RETURN
        ),
        idsWithNames(schemaId, objectId, quotedSchemaName, quotedObjectName) AS
         (SELECT schemaId, objectId,
-         QUOTENAME(SCHEMA_NAME(schemaId)) AS quotedSchemaName, 
+         QUOTENAME(SCHEMA_NAME(schemaId)) AS quotedSchemaName,
          QUOTENAME(OBJECT_NAME(objectId)) AS quotedObjectName
          FROM ids
         )
-  SELECT schemaId, 
-         objectId, 
+  SELECT schemaId,
+         objectId,
          quotedSchemaName,
          quotedObjectName,
-         quotedSchemaName + '.' + quotedObjectName AS quotedFullName, 
-         CASE WHEN LOWER(quotedObjectName) LIKE '[[]test%]' 
-               AND objectId = OBJECT_ID(quotedSchemaName + '.' + quotedObjectName,'P') 
+         quotedSchemaName + '.' + quotedObjectName AS quotedFullName,
+         CASE WHEN LOWER(quotedObjectName) LIKE '[[]test%]'
+               AND objectId = OBJECT_ID(quotedSchemaName + '.' + quotedObjectName,'P')
               THEN 1 ELSE 0 END AS isTestCase
     FROM idsWithNames;
-    
+
 GO
 
 CREATE FUNCTION tSQLt.Private_ResolveName(@Name NVARCHAR(MAX))
-RETURNS TABLE 
+RETURNS TABLE
 AS
 RETURN
   WITH resolvedNames(ord, schemaId, objectId, quotedSchemaName, quotedObjectName, quotedFullName, isTestClass, isTestCase, isSchema) AS
@@ -1121,7 +1121,7 @@ RETURN
    )
    SELECT TOP(1) schemaId, objectId, quotedSchemaName, quotedObjectName, quotedFullName, isTestClass, isTestCase, isSchema
      FROM resolvedNames
-    WHERE schemaId IS NOT NULL 
+    WHERE schemaId IS NOT NULL
        OR ord = 3
     ORDER BY ord
 GO
@@ -1212,7 +1212,7 @@ RETURNS TABLE
 AS
 RETURN
   SELECT PC.Name,
-         PC.Value 
+         PC.Value
     FROM tSQLt.Private_Configurations AS PC
    WHERE PC.Name = @Name;
 GO
@@ -1572,10 +1572,10 @@ CREATE PROCEDURE tSQLt.Private_RenameObject
 AS
 BEGIN
    DECLARE @RenameCmd NVARCHAR(MAX);
-   SET @RenameCmd = 'EXEC sp_rename ''' + 
-                    REPLACE(@SchemaName + '.' + @ObjectName, '''', '''''') + ''', ''' + 
+   SET @RenameCmd = 'EXEC sp_rename ''' +
+                    REPLACE(@SchemaName + '.' + @ObjectName, '''', '''''') + ''', ''' +
                     REPLACE(@NewName, '''', '''''') + ''',''OBJECT'';';
-   
+
    EXEC tSQLt.SuppressOutput @RenameCmd;
 END;
 
@@ -1583,11 +1583,11 @@ END;
 GO
 
 CREATE PROCEDURE tSQLt.Private_MarkObjectBeforeRename
-    @SchemaName NVARCHAR(MAX), 
+    @SchemaName NVARCHAR(MAX),
     @OriginalName NVARCHAR(MAX)
 AS
 BEGIN
-  INSERT INTO tSQLt.Private_RenamedObjectLog (ObjectId, OriginalName) 
+  INSERT INTO tSQLt.Private_RenamedObjectLog (ObjectId, OriginalName)
   VALUES (OBJECT_ID(@SchemaName + '.' + @OriginalName), @OriginalName);
 END;
 
@@ -1601,7 +1601,7 @@ CREATE PROCEDURE tSQLt.Private_RenameObjectToUniqueName
 AS
 BEGIN
    SET @NewName=ISNULL(@NewName, tSQLt.Private::CreateUniqueObjectName());
-   
+
    EXEC tSQLt.Private_MarkObjectBeforeRename @SchemaName, @ObjectName;
 
    EXEC tSQLt.Private_RenameObject @SchemaName,
@@ -1620,9 +1620,9 @@ AS
 BEGIN
    DECLARE @SchemaName NVARCHAR(MAX);
    DECLARE @ObjectName NVARCHAR(MAX);
-   
+
    SELECT @SchemaName = QUOTENAME(OBJECT_SCHEMA_NAME(@ObjectId)), @ObjectName = QUOTENAME(OBJECT_NAME(@ObjectId));
-   
+
    EXEC tSQLt.Private_RenameObjectToUniqueName @SchemaName,@ObjectName, @NewName OUTPUT;
 END;
 
@@ -1630,7 +1630,7 @@ END;
 GO
 
 GO
-CREATE PROCEDURE tSQLt.RemoveObject 
+CREATE PROCEDURE tSQLt.RemoveObject
     @ObjectName NVARCHAR(MAX),
     @NewName NVARCHAR(MAX) = NULL OUTPUT,
     @IfExists INT = 0
@@ -1638,7 +1638,7 @@ AS
 BEGIN
   DECLARE @ObjectId INT;
   SELECT @ObjectId = OBJECT_ID(@ObjectName);
-  
+
   IF(@ObjectId IS NULL)
   BEGIN
     IF(@IfExists = 1) RETURN;
@@ -1653,7 +1653,7 @@ GO
 GO
 
 GO
-CREATE PROCEDURE tSQLt.RemoveObjectIfExists 
+CREATE PROCEDURE tSQLt.RemoveObjectIfExists
     @ObjectName NVARCHAR(MAX),
     @NewName NVARCHAR(MAX) = NULL OUTPUT
 AS
@@ -1685,9 +1685,9 @@ CREATE FUNCTION tSQLt.Private_HandleMessageAndResult (
 RETURNS TABLE
 AS
 RETURN
-  SELECT CASE WHEN ISNULL(@PrevMessage,'') NOT LIKE '%[^ '+CHAR(9)+']%' AND @PrevResult = 'Success' THEN '' 
+  SELECT CASE WHEN ISNULL(@PrevMessage,'') NOT LIKE '%[^ '+CHAR(9)+']%' AND @PrevResult = 'Success' THEN ''
               ELSE CASE WHEN @PrevMessage NOT LIKE '%[^ '+CHAR(9)+']%' THEN '<empty>' ELSE ISNULL(@PrevMessage,'<NULL>') END+' [Result: '+
-                   CASE WHEN @PrevResult NOT LIKE '%[^ '+CHAR(9)+']%' THEN '<empty>' ELSE ISNULL(@PrevResult,'<NULL>') END+'] || ' 
+                   CASE WHEN @PrevResult NOT LIKE '%[^ '+CHAR(9)+']%' THEN '<empty>' ELSE ISNULL(@PrevResult,'<NULL>') END+'] || '
          END+
          CASE WHEN @NewMessage NOT LIKE '%[^ '+CHAR(9)+']%' THEN '<empty>' ELSE ISNULL(@NewMessage,'<NULL>') END Message,
          (SELECT TOP(1) Result FROM tSQLt.Private_Results WHERE Result IN (@PrevResult, @NewResult) ORDER BY Severity DESC) Result;
@@ -1714,7 +1714,7 @@ CREATE FUNCTION tSQLt.Private_ListTestAnnotations(
 RETURNS TABLE
 AS
 RETURN
-  SELECT 
+  SELECT
       GAL.AnnotationNo,
       REPLACE(GAL.Annotation,'''','''''') AS EscapedAnnotationString,
       'tSQLt.'+GAL.Annotation AS Annotation
@@ -1735,8 +1735,8 @@ BEGIN
 
   SELECT * INTO #AnnotationList FROM tSQLt.Private_ListTestAnnotations(@TestObjectId);
   SET @UnmatchedQuotesAnnotation = NULL;
-  SELECT TOP(1) @UnmatchedQuotesAnnotation = AL.Annotation 
-    FROM #AnnotationList AS AL 
+  SELECT TOP(1) @UnmatchedQuotesAnnotation = AL.Annotation
+    FROM #AnnotationList AS AL
    WHERE (LEN(AL.Annotation ) - LEN(REPLACE(AL.Annotation, '''', '')))%2=1
    ORDER BY AL.AnnotationNo;
 
@@ -1745,10 +1745,10 @@ BEGIN
     RAISERROR('Annotation has unmatched quote: %s',16,10,@UnmatchedQuotesAnnotation);
   END;
 
-  SELECT @Cmd = 
+  SELECT @Cmd =
     'DECLARE @EM NVARCHAR(MAX),@ES INT,@ET INT,@EP NVARCHAR(MAX);'+
     (
-      SELECT 
+      SELECT
          'BEGIN TRY;INSERT INTO #AnnotationCommands '+
                 'SELECT '+
                  CAST(AL.AnnotationNo AS NVARCHAR(MAX))+','+
@@ -1763,7 +1763,7 @@ BEGIN
                     '  caused by {%i,%i} %s'',16,10,'''+
                     AL.EscapedAnnotationString+
                     ''',@ES,@ET,@EM);'+
-         'END CATCH;' 
+         'END CATCH;'
         FROM #AnnotationList AS AL
        ORDER BY AL.AnnotationNo
          FOR XML PATH,TYPE
@@ -1790,10 +1790,10 @@ BEGIN
   --PRINT '--------------------------------';
 
 
-    SELECT @Cmd = 
+    SELECT @Cmd =
     'DECLARE @EM NVARCHAR(MAX),@ES INT,@ET INT,@EP NVARCHAR(MAX);'+
     (
-      SELECT 
+      SELECT
          'BEGIN TRY;'+
          'IF(NOT EXISTS(SELECT 1 FROM #SkipTest)) BEGIN '+
          AnnotationCmd+
@@ -1807,7 +1807,7 @@ BEGIN
                     'Original Error: {%i,%i;%s} %s'',16,10,'''+
                     REPLACE(AnnotationString,'''','''''')+
                     ''',@ES,@ET,@EP,@EM);'+
-         'END CATCH;' 
+         'END CATCH;'
         FROM #AnnotationCommands
        ORDER BY AnnotationOrderNo
          FOR XML PATH,TYPE
@@ -1843,7 +1843,7 @@ BEGIN
    DELETE #ExpectException;
    RAISERROR('Each test can only contain one call to tSQLt.ExpectException.',16,10);
  END;
- 
+
  INSERT INTO #ExpectException(ExpectException, ExpectedMessage, ExpectedSeverity, ExpectedState, ExpectedMessagePattern, ExpectedErrorNumber, FailMessage)
  VALUES(1, @ExpectedMessage, @ExpectedSeverity, @ExpectedState, @ExpectedMessagePattern, @ExpectedErrorNumber, @Message);
 END;
@@ -1865,7 +1865,7 @@ BEGIN
    DELETE #ExpectException;
    RAISERROR('tSQLt.ExpectNoException cannot follow tSQLt.ExpectException inside a single test.',16,10);
  END;
- 
+
  INSERT INTO #ExpectException(ExpectException, FailMessage)
  VALUES(0, @Message);
 END;
@@ -1878,7 +1878,7 @@ CREATE FUNCTION tSQLt.Private_SqlVersion()
 RETURNS TABLE
 AS
 RETURN
-  SELECT 
+  SELECT
       CAST(SERVERPROPERTY('ProductVersion')AS NVARCHAR(128)) ProductVersion,
       CAST(SERVERPROPERTY('Edition')AS NVARCHAR(128)) Edition
 GO
@@ -1895,7 +1895,7 @@ RETURN
 /* Important: Do not rename the @ProducVersion parameter! */
 /*StartSnip*/
 SELECT REVERSE(PARSENAME(X.RP,1)) Major,
-       REVERSE(PARSENAME(X.RP,2)) Minor, 
+       REVERSE(PARSENAME(X.RP,2)) Minor,
        REVERSE(PARSENAME(X.RP,3)) Build,
        REVERSE(PARSENAME(X.RP,4)) Revision
   FROM (SELECT REVERSE(@ProductVersion)) AS X(RP)
@@ -1915,16 +1915,16 @@ AS
 RETURN
 /* Important: Do not rename the @ProductVersion parameter! */
 /*StartSnip*/
-  SELECT 
-      @ProductVersion ProductVersion, 
-      CASE 
-        WHEN SSV.Major = '15' THEN '2019' 
-        WHEN SSV.Major = '14' THEN '2017' 
-        WHEN SSV.Major = '13' THEN '2016' 
-        WHEN SSV.Major = '12' THEN '2014' 
-        WHEN SSV.Major = '11' THEN '2012' 
-        WHEN SSV.Major = '10' AND SSV.Minor IN ('50','5') THEN '2008R2' 
-        WHEN SSV.Major = '10' AND SSV.Minor IN ('00','0') THEN '2008' 
+  SELECT
+      @ProductVersion ProductVersion,
+      CASE
+        WHEN SSV.Major = '15' THEN '2019'
+        WHEN SSV.Major = '14' THEN '2017'
+        WHEN SSV.Major = '13' THEN '2016'
+        WHEN SSV.Major = '12' THEN '2014'
+        WHEN SSV.Major = '11' THEN '2012'
+        WHEN SSV.Major = '10' AND SSV.Minor IN ('50','5') THEN '2008R2'
+        WHEN SSV.Major = '10' AND SSV.Minor IN ('00','0') THEN '2008'
        END FriendlyVersion
 /*EndSnip*/
 /* Important: Do not rename the @ProductVersion parameter! */
@@ -1973,12 +1973,12 @@ CREATE TABLE tSQLt.Private_Seize_NoTruncate(
 GO
 CREATE TRIGGER tSQLt.Private_Seize_Stop ON tSQLt.Private_Seize INSTEAD OF DELETE,UPDATE
 AS
-BEGIN 
+BEGIN
   RAISERROR('This is a private table that you should not mess with!',16,10);
 END;
 GO
 
-  
+
 
 
 GO
@@ -2052,45 +2052,45 @@ BEGIN
   DECLARE @UnquotedObjectName NVARCHAR(MAX);
   DECLARE @UnquotedParentName NVARCHAR(MAX);
   DECLARE @TempObjectFlagOn BIT = 1;
-  SELECT 
+  SELECT
       @UnquotedSchemaName = SCHEMA_NAME(O.schema_id),
       @UnquotedObjectName = O.name,
       @UnquotedParentName = OBJECT_NAME(O.parent_object_id)
-    FROM sys.objects O 
+    FROM sys.objects O
    WHERE O.object_id = OBJECT_ID(@ObjectName);
 
   IF(@UnquotedParentName IS NULL)
   BEGIN
-    EXEC sys.sp_addextendedproperty 
+    EXEC sys.sp_addextendedproperty
        @name = N'tSQLt.IsTempObject',
-       @value = @TempObjectFlagOn, 
-       @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName, 
-       @level1type = @ObjectType,  @level1name = @UnquotedObjectName;   
+       @value = @TempObjectFlagOn,
+       @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName,
+       @level1type = @ObjectType,  @level1name = @UnquotedObjectName;
 
     IF(@NewNameOfOriginalObject IS NOT NULL)
     BEGIN
-      EXEC sys.sp_addextendedproperty 
-         @name = N'tSQLt.Private_TestDouble_OrgObjectName', 
-         @value = @NewNameOfOriginalObject, 
-         @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName, 
+      EXEC sys.sp_addextendedproperty
+         @name = N'tSQLt.Private_TestDouble_OrgObjectName',
+         @value = @NewNameOfOriginalObject,
+         @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName,
          @level1type = @ObjectType,  @level1name = @UnquotedObjectName;
     END;
   END;
   ELSE
   BEGIN
-    EXEC sys.sp_addextendedproperty 
+    EXEC sys.sp_addextendedproperty
        @name = N'tSQLt.IsTempObject',
-       @value = @TempObjectFlagOn, 
-       @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName, 
+       @value = @TempObjectFlagOn,
+       @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName,
        @level1type = N'TABLE',  @level1name = @UnquotedParentName,
        @level2type = @ObjectType,  @level2name = @UnquotedObjectName;
 
     IF(@NewNameOfOriginalObject IS NOT NULL)
     BEGIN
-      EXEC sys.sp_addextendedproperty 
-         @name = N'tSQLt.Private_TestDouble_OrgObjectName', 
-         @value = @NewNameOfOriginalObject, 
-         @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName, 
+      EXEC sys.sp_addextendedproperty
+         @name = N'tSQLt.Private_TestDouble_OrgObjectName',
+         @value = @NewNameOfOriginalObject,
+         @level0type = N'SCHEMA', @level0name = @UnquotedSchemaName,
          @level1type = N'TABLE',  @level1name = @UnquotedParentName,
          @level2type = @ObjectType,  @level2name = @UnquotedObjectName;
     END;
@@ -2123,7 +2123,7 @@ BEGIN
           SET @cmd = 'SELECT * INTO '+@NewQuotedNameForBackupTable+' FROM '+@FullTableName+';';
           EXEC (@cmd);
           INSERT INTO #TableBackupLog (OriginalName, BackupName) VALUES (@FullTableName, @NewQuotedNameForBackupTable);
-          EXEC tSQLt.Private_MarktSQLtTempObject @ObjectName = @NewQuotedNameForBackupTable, @ObjectType = N'TABLE', @NewNameOfOriginalObject = NULL; 
+          EXEC tSQLt.Private_MarktSQLtTempObject @ObjectName = @NewQuotedNameForBackupTable, @ObjectType = N'TABLE', @NewNameOfOriginalObject = NULL;
         END;
       END;
       ELSE IF (@TableAction = 'Hide')
@@ -2151,7 +2151,7 @@ BEGIN
       IF (@TableAction = 'Restore')
       BEGIN
         BEGIN TRAN;
-          DECLARE @BackupTableName TABLE(TableName NVARCHAR(MAX)); 
+          DECLARE @BackupTableName TABLE(TableName NVARCHAR(MAX));
           DELETE FROM #TableBackupLog OUTPUT DELETED.BackupName INTO @BackupTableName WHERE OriginalName = @FullTableName;
           IF(EXISTS(SELECT 1 FROM @BackupTableName AS BTN))
           BEGIN
@@ -2172,7 +2172,7 @@ BEGIN
       BEGIN
         EXEC('DELETE FROM ' + @FullTableName +';');
       END;
-      ELSE IF (@TableAction IN ('Ignore','Hide')) 
+      ELSE IF (@TableAction IN ('Ignore','Hide'))
       BEGIN
         /* Hidden tables will be restored by UndoTestDoubles. */
         RETURN;
@@ -2251,13 +2251,13 @@ CREATE PROCEDURE tSQLt.Private_CleanUp
 AS
 BEGIN
 
-  EXEC tSQLt.Private_CleanUpCmdHandler 
+  EXEC tSQLt.Private_CleanUpCmdHandler
          @CleanUpCmd = 'EXEC tSQLt.Private_NoTransactionHandleTables @Action=''Reset'';',
          @TestResult = @Result OUT,
          @TestMsg = @ErrorMsg OUT,
          @ResultInCaseOfError = 'FATAL';
 
-  EXEC tSQLt.Private_CleanUpCmdHandler 
+  EXEC tSQLt.Private_CleanUpCmdHandler
          @CleanUpCmd = 'EXEC tSQLt.UndoTestDoubles @Force = 0;',
          @TestResult = @Result OUT,
          @TestMsg = @ErrorMsg OUT,
@@ -2360,7 +2360,7 @@ BEGIN
       END;
 
       SET @PreExecTrancount = @@TRANCOUNT;
-    
+
       DECLARE @TmpMsg NVARCHAR(MAX);
       SET @TestEndTime = NULL;
       BEGIN TRY
@@ -2400,7 +2400,7 @@ BEGIN
               DECLARE @ExpectedErrorNumber INT;
               DECLARE @FailMessage NVARCHAR(MAX);
               SELECT @ExpectException = ExpectException,
-                     @ExpectedMessage = ExpectedMessage, 
+                     @ExpectedMessage = ExpectedMessage,
                      @ExpectedSeverity = ExpectedSeverity,
                      @ExpectedState = ExpectedState,
                      @ExpectedMessagePattern = ExpectedMessagePattern,
@@ -2451,11 +2451,11 @@ BEGIN
                 BEGIN
                   SET @Msg = @TmpMsg;
                 END
-              END 
+              END
               ELSE
               BEGIN
                   SET @Result = 'Failure';
-                  SET @Msg = 
+                  SET @Msg =
                     COALESCE(@FailMessage+' ','')+
                     'Expected no error to be raised. Instead this error was encountered:'+
                     CHAR(13)+CHAR(10)+
@@ -2466,7 +2466,7 @@ BEGIN
             BEGIN
               SET @Result = 'Error';
               SET @Msg = @ErrorInfo;
-            END; 
+            END;
           END;
       END CATCH;
     END TRY
@@ -2496,7 +2496,7 @@ BEGIN
           SELECT @Msg = COALESCE(@Msg, '<NULL>') + ' (There was also a ROLLBACK ERROR --> ' + FormattedError + ')' FROM tSQLt.Private_GetFormattedErrorInfo();
           SET @Result = 'Error';
         END;
-    END CATCH;  
+    END CATCH;
     IF (@NoTransactionFlag = 1)
     BEGIN
       SET @CleanUpProcedureExecutionCmd = (
@@ -2556,7 +2556,7 @@ BEGIN
     DECLARE @VerboseMsg NVARCHAR(MAX);
     DECLARE @Verbose BIT;
     SET @Verbose = ISNULL((SELECT CAST(Value AS BIT) FROM tSQLt.Private_GetConfiguration('Verbose')),0);
-    
+
     TRUNCATE TABLE tSQLt.CaptureOutputLog;
     CREATE TABLE #TestMessage(Msg NVARCHAR(MAX));
     CREATE TABLE #ExpectException(ExpectException INT,ExpectedMessage NVARCHAR(MAX), ExpectedSeverity INT, ExpectedState INT, ExpectedMessagePattern NVARCHAR(MAX), ExpectedErrorNumber INT, FailMessage NVARCHAR(MAX));
@@ -2571,12 +2571,12 @@ BEGIN
       RETURN -1;
     END;
 
-    
+
     SELECT @TestClassName = OBJECT_SCHEMA_NAME(OBJECT_ID(@TestName)),
            @TestProcName = tSQLt.Private_GetCleanObjectName(@TestName),
            @TestObjectId = OBJECT_ID(@TestName);
-           
-    INSERT INTO tSQLt.TestResult(Class, TestCase, TranName, Result) 
+
+    INSERT INTO tSQLt.TestResult(Class, TestCase, TranName, Result)
         SELECT @TestClassName, @TestProcName, @TranName, 'A severe error happened during test execution. Test did not finish.'
         OPTION(MAXDOP 1);
     SELECT @TestResultId = SCOPE_IDENTITY();
@@ -2618,9 +2618,9 @@ BEGIN
       ELSE
       BEGIN
         DECLARE @TmpMsg NVARCHAR(MAX);
-        SELECT 
+        SELECT
             @Result = 'Skipped',
-            @Msg = ST.SkipTestMessage 
+            @Msg = ST.SkipTestMessage
           FROM #SkipTest AS ST;
         SET @TmpMsg = '-->'+@TestName+' skipped: '+@Msg;
         EXEC tSQLt.Private_Print @Message = @TmpMsg;
@@ -2649,12 +2649,12 @@ BEGIN
     ELSE
     BEGIN
         INSERT tSQLt.TestResult(Class, TestCase, TranName, Result, Msg)
-        SELECT @TestClassName, 
-               @TestProcName,  
-               '?', 
-               'Error', 
+        SELECT @TestClassName,
+               @TestProcName,
+               '?',
+               'Error',
                'TestResult entry is missing; Original outcome: ' + @Result + ', ' + @Msg;
-    END;    
+    END;
 
     IF(@Verbose = 1)
     BEGIN
@@ -2666,7 +2666,7 @@ BEGIN
 
     IF(@Result = 'FATAL')
     BEGIN
-      INSERT INTO tSQLt.Private_Seize VALUES(1);   
+      INSERT INTO tSQLt.Private_Seize VALUES(1);
       RAISERROR('The last test has invalidated the current installation of tSQLt. Please reinstall tSQLt.',16,10);
     END;
     IF(@Result = 'Abort')
@@ -2688,7 +2688,7 @@ BEGIN
     DECLARE @SetupProcName NVARCHAR(MAX);
     DECLARE @CleanUpProcName NVARCHAR(MAX);
     EXEC tSQLt.Private_GetClassHelperProcedureName @TestClassId, @SetupProcName OUT, @CleanUpProcName OUT;
-    
+
     DECLARE @cmd NVARCHAR(MAX) = (
       (
         SELECT 'EXEC tSQLt.Private_RunTest '''+REPLACE(tSQLt.Private_GetQuotedFullName(object_id),'''','''''')+''', '+ISNULL(''''+REPLACE(@SetupProcName,'''','''''')+'''','NULL')+', '+ISNULL(''''+REPLACE(@CleanUpProcName,'''','''''')+'''','NULL')+';'
@@ -2715,10 +2715,10 @@ SET NOCOUNT ON;
     DECLARE @IsTestCase BIT;
     DECLARE @IsSchema BIT;
     DECLARE @SetUp NVARCHAR(MAX);SET @SetUp = NULL;
-    
+
     SELECT @TestName = TestName FROM tSQLt.Private_GetLastTestNameIfNotProvided(@TestName);
     EXEC tSQLt.Private_SaveTestNameForSession @TestName;
-    
+
     SELECT @TestClassId = schemaId,
            @FullName = quotedFullName,
            @IsTestClass = isTestClass,
@@ -2730,7 +2730,7 @@ SET NOCOUNT ON;
     BEGIN
         EXEC tSQLt.Private_RunTestClass @FullName;
     END
-    
+
     IF @IsTestCase = 1
     BEGIN
       DECLARE @SetupProcName NVARCHAR(MAX);
@@ -2756,7 +2756,7 @@ BEGIN
 
   CREATE TABLE #TestClassesForRunCursor(Name NVARCHAR(MAX));
   EXEC @GetCursorCallback;
-----  
+----
   DECLARE @cmd NVARCHAR(MAX) = (
     (
       SELECT 'EXEC tSQLt.Private_RunTestClass '''+REPLACE(Name, '''' ,'''''')+''';'
@@ -2765,7 +2765,7 @@ BEGIN
     ).value('.','NVARCHAR(MAX)')
   );
   EXEC(@cmd);
-  
+
   EXEC tSQLt.Private_OutputTestResults @TestResultFormatter;
 END;
 GO
@@ -2816,13 +2816,13 @@ BEGIN
 
   EXEC tSQLt.Private_Init;
   IF(@@ERROR = 0)
-  BEGIN  
+  BEGIN
     IF(EXISTS(SELECT * FROM sys.parameters AS P WHERE P.object_id = OBJECT_ID(@RunMethod) AND name = '@TestName'))
     BEGIN
       EXEC @RunMethod @TestName = @TestName, @TestResultFormatter = @TestResultFormatter;
     END;
     ELSE
-    BEGIN  
+    BEGIN
       EXEC @RunMethod @TestResultFormatter = @TestResultFormatter;
     END;
   END;
@@ -2859,7 +2859,7 @@ CREATE PROCEDURE tSQLt.Run
    @TestResultFormatter NVARCHAR(MAX) = NULL
 AS
 BEGIN
-  EXEC tSQLt.Private_RunMethodHandler @RunMethod = 'tSQLt.Private_Run', @TestResultFormatter = @TestResultFormatter, @TestName = @TestName; 
+  EXEC tSQLt.Private_RunMethodHandler @RunMethod = 'tSQLt.Private_Run', @TestResultFormatter = @TestResultFormatter, @TestName = @TestName;
 END;
 GO
 CREATE PROCEDURE tSQLt.Private_InputBuffer
@@ -2920,18 +2920,18 @@ BEGIN
     DECLARE @SuccessCnt INT;
     DECLARE @Severity INT;
     DECLARE @SummaryError INT;
-    
+
     SELECT *
       INTO #TestResultOutput
       FROM tSQLt.Private_PrepareTestResultForOutput() AS PTRFO;
-    
+
     EXEC tSQLt.TableToText @TestList OUTPUT, '#TestResultOutput', 'No';
 
-    SELECT @CountSummaryMsg = Msg, 
+    SELECT @CountSummaryMsg = Msg,
            @IsSuccess = 1 - SIGN(FailCnt + ErrorCnt),
            @SuccessCnt = SuccessCnt
       FROM tSQLt.TestCaseSummary();
-      
+
     SELECT @SummaryError = CAST(PC.Value AS INT)
       FROM tSQLt.Private_Configurations AS PC
      WHERE PC.Name = 'SummaryError';
@@ -2941,11 +2941,11 @@ BEGIN
     BEGIN
       SET @Severity = 0;
     END;
-    
+
     SELECT @Dashes = REPLICATE('-',LEN(@CountSummaryMsg)),
            @NewLine = CHAR(13)+CHAR(10);
-    
-    
+
+
     EXEC tSQLt.Private_Print @NewLine,0;
     EXEC tSQLt.Private_Print '+----------------------+',0;
     EXEC tSQLt.Private_Print '|Test Execution Summary|',0;
@@ -2964,7 +2964,7 @@ BEGIN
     DECLARE @XmlOutput XML;
 
     SELECT @XmlOutput = (
-      SELECT *--Tag, Parent, [testsuites!1!hide!hide], [testsuite!2!name], [testsuite!2!tests], [testsuite!2!errors], [testsuite!2!failures], [testsuite!2!timestamp], [testsuite!2!time], [testcase!3!classname], [testcase!3!name], [testcase!3!time], [failure!4!message]  
+      SELECT *--Tag, Parent, [testsuites!1!hide!hide], [testsuite!2!name], [testsuite!2!tests], [testsuite!2!errors], [testsuite!2!failures], [testsuite!2!timestamp], [testsuite!2!time], [testcase!3!classname], [testcase!3!name], [testcase!3!time], [failure!4!message]
         FROM (
           SELECT 1 AS Tag,
                  NULL AS Parent,
@@ -2992,7 +2992,7 @@ BEGIN
                  NULL AS [system-out!8!hide],
                  NULL AS [system-err!9!hide]
           UNION ALL
-          SELECT 2 AS Tag, 
+          SELECT 2 AS Tag,
                  1 AS Parent,
                  'root',
                  ROW_NUMBER()OVER(ORDER BY Class),
@@ -3236,12 +3236,12 @@ AS
 BEGIN
     EXEC tSQLt.Run @TestClassName;
 END
-GO    
+GO
 --Build-
 
 
 
-      --SELECT 3 X, @SkipTestFlag SkipTestFlag, 
+      --SELECT 3 X, @SkipTestFlag SkipTestFlag,
       --       @NoTransactionFlag NoTransactionFlag,
       --       @TransactionStartedFlag TransactionStartedFlag,
       --       @PreExecTrancount PreExecTrancount,
@@ -3283,7 +3283,7 @@ FROM(
                    WHEN T.name IN ('decimal', 'numeric')
                     THEN '(' + CAST(@Precision AS NVARCHAR) + ',' + CAST(@Scale AS NVARCHAR) + ')'
                    WHEN T.name IN ('datetime2', 'datetimeoffset', 'time')
-                    THEN '(' + CAST(@Scale AS NVARCHAR) + ')'     
+                    THEN '(' + CAST(@Scale AS NVARCHAR) + ')'
                    ELSE ''
                END Suffix,
               CASE WHEN @CollationName IS NULL OR T.is_user_defined = 1 THEN ''
@@ -3329,14 +3329,14 @@ RETURN
            WHEN 2 THEN 'NONCLUSTERED'
            WHEN 5 THEN 'CLUSTERED COLUMNSTORE'
            WHEN 6 THEN 'NONCLUSTERED COLUMNSTORE'
-           ELSE '{Index Type Not Supported!}' 
+           ELSE '{Index Type Not Supported!}'
          END +
          ' INDEX ' +
          QUOTENAME(I.name)+
          ' ON ' + QUOTENAME(OBJECT_SCHEMA_NAME(@object_id)) + '.' + QUOTENAME(OBJECT_NAME(@object_id)) +
          CASE WHEN I.type NOT IN (5)
            THEN
-             '('+ 
+             '('+
              CL.column_list +
              ')'
            ELSE ''
@@ -3355,7 +3355,7 @@ RETURN
    (
      SELECT
       (
-        SELECT 
+        SELECT
           CASE WHEN OIC.rn > 1 THEN ',' ELSE '' END +
           CASE WHEN OIC.rn = 1 AND OIC.is_included_column = 1 AND I.type NOT IN (6) THEN ')INCLUDE(' ELSE '' END +
           QUOTENAME(OIC.name) +
@@ -3366,7 +3366,7 @@ RETURN
           FROM
           (
             SELECT C.name,
-                   IC.is_descending_key, 
+                   IC.is_descending_key,
                    IC.key_ordinal,
                    IC.is_included_column,
                    ROW_NUMBER()OVER(PARTITION BY IC.is_included_column ORDER BY IC.key_ordinal, IC.index_column_id) AS rn
@@ -3410,17 +3410,17 @@ CREATE PROCEDURE tSQLt.Private_RemoveSchemaBoundReferences
 AS
 BEGIN
   DECLARE @cmd NVARCHAR(MAX);
-  SELECT @cmd = 
+  SELECT @cmd =
   (
-    SELECT 
+    SELECT
       'EXEC tSQLt.Private_RemoveSchemaBoundReferences @object_id = '+STR(SED.referencing_id)+';'+
       'EXEC tSQLt.Private_RemoveSchemaBinding @object_id = '+STR(SED.referencing_id)+';'
       FROM
       (
-        SELECT DISTINCT SEDI.referencing_id,SEDI.referenced_id 
+        SELECT DISTINCT SEDI.referencing_id,SEDI.referenced_id
           FROM sys.sql_expression_dependencies AS SEDI
          WHERE SEDI.is_schema_bound_reference = 1
-      ) AS SED 
+      ) AS SED
      WHERE SED.referenced_id = @object_id
        FOR XML PATH(''),TYPE
   ).value('.','NVARCHAR(MAX)');
@@ -3473,12 +3473,12 @@ AS
 RETURN SELECT 'CONSTRAINT ' + name + ' FOREIGN KEY (' +
               parCols + ') REFERENCES ' + refName + '(' + refCols + ')'+
               CASE WHEN @NoCascade = 1 THEN ''
-                ELSE delete_referential_action_cmd + ' ' + update_referential_action_cmd 
+                ELSE delete_referential_action_cmd + ' ' + update_referential_action_cmd
               END AS cmd,
-              CASE 
+              CASE
                 WHEN RefTableIsFakedInd = 1
-                  THEN 'CREATE UNIQUE INDEX ' + tSQLt.Private::CreateUniqueObjectName() + ' ON ' + refName + '(' + refCols + ');' 
-                ELSE '' 
+                  THEN 'CREATE UNIQUE INDEX ' + tSQLt.Private::CreateUniqueObjectName() + ' ON ' + refName + '(' + refCols + ');'
+                ELSE ''
               END CreIdxCmd
          FROM (SELECT QUOTENAME(SCHEMA_NAME(k.schema_id)) AS SchemaName,
                       QUOTENAME(k.name) AS name,
@@ -3501,7 +3501,7 @@ RETURN SELECT 'CONSTRAINT ' + name + ' FOREIGN KEY (' +
                         WHEN 3 THEN 'SET DEFAULT'
                       END AS delete_referential_action_cmd,
                       CASE WHEN e.name IS NULL THEN 0
-                           ELSE 1 
+                           ELSE 1
                        END AS RefTableIsFakedInd
                  FROM sys.foreign_keys k
                  CROSS APPLY tSQLt.Private_GetForeignKeyParColumns(k.object_id) AS parCol
@@ -3563,7 +3563,7 @@ CREATE FUNCTION tSQLt.Private_ResolveApplyConstraintParameters
   @C NVARCHAR(MAX)
 )
 RETURNS TABLE
-AS 
+AS
 RETURN
   SELECT ConstraintObjectId, ConstraintType
     FROM tSQLt.Private_FindConstraint(OBJECT_ID(@A), @B)
@@ -3583,17 +3583,17 @@ BEGIN
   DECLARE @Cmd NVARCHAR(MAX);
   DECLARE @NewNameOfOriginalConstraint NVARCHAR(MAX);
   DECLARE @QuotedFullConstraintName NVARCHAR(MAX);
-  SELECT @Cmd = 'CONSTRAINT ' + QUOTENAME(name) + ' CHECK' + definition 
+  SELECT @Cmd = 'CONSTRAINT ' + QUOTENAME(name) + ' CHECK' + definition
     FROM sys.check_constraints
    WHERE object_id = @ConstraintObjectId;
-  
+
   DECLARE @QuotedTableName NVARCHAR(MAX);
-  
+
   SELECT @QuotedTableName = QuotedTableName FROM tSQLt.Private_GetQuotedTableNameForConstraint(@ConstraintObjectId);
 
   SELECT @Cmd = 'ALTER TABLE ' + @QuotedTableName + ' ADD ' + @Cmd,
          @QuotedFullConstraintName = QUOTENAME(SCHEMA_NAME(schema_id))+'.'+QUOTENAME(name)
-    FROM sys.objects 
+    FROM sys.objects
    WHERE object_id = @ConstraintObjectId;
 
   EXEC tSQLt.Private_RenameObjectToUniqueNameUsingObjectId @ConstraintObjectId, @NewName = @NewNameOfOriginalConstraint OUT;
@@ -3601,10 +3601,10 @@ BEGIN
   EXEC (@Cmd);
 
   EXEC tSQLt.Private_MarktSQLtTempObject @ObjectName = @QuotedFullConstraintName, @ObjectType = 'CONSTRAINT', @NewNameOfOriginalObject = @NewNameOfOriginalConstraint;
-END; 
+END;
 GO
 
-CREATE PROCEDURE tSQLt.Private_ApplyForeignKeyConstraint 
+CREATE PROCEDURE tSQLt.Private_ApplyForeignKeyConstraint
   @ConstraintObjectId INT,
   @NoCascade BIT
 AS
@@ -3620,17 +3620,17 @@ BEGIN
   DECLARE @NewNameOfOriginalConstraint NVARCHAR(MAX);
   DECLARE @QuotedFullConstraintName NVARCHAR(MAX);
 
-  
+
   SELECT @SchemaName = SchemaName,
          @OrgTableName = OrgTableName,
          @TableName = TableName,
          @ConstraintName = OBJECT_NAME(@ConstraintObjectId),
          @QuotedFullConstraintName = QUOTENAME(SchemaName)+'.'+QUOTENAME(OBJECT_NAME(@ConstraintObjectId))
     FROM tSQLt.Private_GetQuotedTableNameForConstraint(@ConstraintObjectId);
-      
+
   SELECT @CreateFkCmd = cmd, @CreateIndexCmd = CreIdxCmd
     FROM tSQLt.Private_GetForeignKeyDefinition(@SchemaName, @OrgTableName, @ConstraintName, @NoCascade);
-  SELECT @AlterTableCmd = 'ALTER TABLE ' + QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName) + 
+  SELECT @AlterTableCmd = 'ALTER TABLE ' + QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName) +
                           ' ADD ' + @CreateFkCmd;
   SELECT @FinalCmd = @CreateIndexCmd + @AlterTableCmd;
 
@@ -3642,7 +3642,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE tSQLt.Private_ApplyUniqueConstraint 
+CREATE PROCEDURE tSQLt.Private_ApplyUniqueConstraint
   @ConstraintObjectId INT
 AS
 BEGIN
@@ -3653,13 +3653,13 @@ BEGIN
   DECLARE @AlterColumnsCmd NVARCHAR(MAX);
   DECLARE @NewNameOfOriginalConstraint NVARCHAR(MAX);
   DECLARE @QuotedFullConstraintName NVARCHAR(MAX);
-  
+
   SELECT @SchemaName = SchemaName,
          @TableName = TableName,
          @ConstraintName = OBJECT_NAME(@ConstraintObjectId),
          @QuotedFullConstraintName = QUOTENAME(SchemaName)+'.'+QUOTENAME(OBJECT_NAME(@ConstraintObjectId))
     FROM tSQLt.Private_GetQuotedTableNameForConstraint(@ConstraintObjectId);
-      
+
   SELECT @AlterColumnsCmd = NotNullColumnCmd,
          @CreateConstraintCmd = CreateConstraintCmd
     FROM tSQLt.Private_GetUniqueConstraintDefinition(@ConstraintObjectId, QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName));
@@ -3677,7 +3677,7 @@ RETURNS TABLE
 AS
 RETURN
   SELECT object_id,type,type_desc
-    FROM sys.objects 
+    FROM sys.objects
    WHERE object_id = OBJECT_ID(SCHEMA_NAME(schema_id)+'.'+@ConstraintName)
      AND parent_object_id = @TableObjectId;
 GO
@@ -3691,7 +3691,7 @@ AS
 BEGIN
   DECLARE @ConstraintType NVARCHAR(MAX);
   DECLARE @ConstraintObjectId INT;
-  
+
   SELECT @ConstraintType = ConstraintType, @ConstraintObjectId = ConstraintObjectId
     FROM tSQLt.Private_ResolveApplyConstraintParameters (@TableName, @ConstraintName, @SchemaName);
 
@@ -3705,15 +3705,15 @@ BEGIN
   BEGIN
     EXEC tSQLt.Private_ApplyForeignKeyConstraint @ConstraintObjectId, @NoCascade;
     RETURN 0;
-  END;  
-   
+  END;
+
   IF @ConstraintType IN('UNIQUE_CONSTRAINT', 'PRIMARY_KEY_CONSTRAINT')
   BEGIN
     EXEC tSQLt.Private_ApplyUniqueConstraint @ConstraintObjectId;
     RETURN 0;
-  END;  
-   
-  RAISERROR ('ApplyConstraint could not resolve the object names, ''%s'', ''%s''. Be sure to call ApplyConstraint and pass in two parameters, such as: EXEC tSQLt.ApplyConstraint ''MySchema.MyTable'', ''MyConstraint''', 
+  END;
+
+  RAISERROR ('ApplyConstraint could not resolve the object names, ''%s'', ''%s''. Be sure to call ApplyConstraint and pass in two parameters, such as: EXEC tSQLt.ApplyConstraint ''MySchema.MyTable'', ''MyConstraint''',
              16, 10, @TableName, @ConstraintName);
   RETURN 0;
 END;
@@ -3731,8 +3731,8 @@ BEGIN
    IF @SchemaName IS NULL
    BEGIN
         DECLARE @FullName NVARCHAR(MAX); SET @FullName = @OrigTableName + COALESCE('.' + @OrigSchemaName, '');
-        
-        RAISERROR ('FakeTable could not resolve the object name, ''%s''. (When calling tSQLt.FakeTable, avoid the use of the @SchemaName parameter, as it is deprecated.)', 
+
+        RAISERROR ('FakeTable could not resolve the object name, ''%s''. (When calling tSQLt.FakeTable, avoid the use of the @SchemaName parameter, as it is deprecated.)',
                    16, 10, @FullName);
    END;
 END;
@@ -3744,10 +3744,10 @@ GO
 CREATE FUNCTION tSQLt.Private_GetDataTypeOrComputedColumnDefinition(@UserTypeId INT, @MaxLength INT, @Precision INT, @Scale INT, @CollationName NVARCHAR(MAX), @ObjectId INT, @ColumnId INT, @ReturnDetails BIT)
 RETURNS TABLE
 AS
-RETURN SELECT 
+RETURN SELECT
               COALESCE(cc.IsComputedColumn, 0) AS IsComputedColumn,
               COALESCE(cc.ComputedColumnDefinition, GFTN.TypeName) AS ColumnDefinition
-        FROM (SELECT @UserTypeId, @MaxLength, @Precision, @Scale, @CollationName, @ObjectId, @ColumnId, @ReturnDetails) 
+        FROM (SELECT @UserTypeId, @MaxLength, @Precision, @Scale, @CollationName, @ObjectId, @ColumnId, @ReturnDetails)
              AS V(UserTypeId, MaxLength, Precision, Scale, CollationName, ObjectId, ColumnId, ReturnDetails)
        CROSS APPLY tSQLt.Private_GetFullTypeName(V.UserTypeId, V.MaxLength, V.Precision, V.Scale, V.CollationName) AS GFTN
         LEFT JOIN (SELECT 1 AS IsComputedColumn,
@@ -3758,7 +3758,7 @@ RETURN SELECT
                   )cc
                ON cc.object_id = V.ObjectId
               AND cc.column_id = V.ColumnId
-              AND V.ReturnDetails = 1;               
+              AND V.ReturnDetails = 1;
 
 
 GO
@@ -3766,19 +3766,19 @@ GO
 CREATE FUNCTION tSQLt.Private_GetIdentityDefinition(@ObjectId INT, @ColumnId INT, @ReturnDetails BIT)
 RETURNS TABLE
 AS
-RETURN SELECT 
+RETURN SELECT
               COALESCE(IsIdentity, 0) AS IsIdentityColumn,
               COALESCE(IdentityDefinition, '') AS IdentityDefinition
         FROM (SELECT 1) X(X)
         LEFT JOIN (SELECT 1 AS IsIdentity,
-                          ' IDENTITY(' + CAST(seed_value AS NVARCHAR(MAX)) + ',' + CAST(increment_value AS NVARCHAR(MAX)) + ')' AS IdentityDefinition, 
-                          object_id, 
+                          ' IDENTITY(' + CAST(seed_value AS NVARCHAR(MAX)) + ',' + CAST(increment_value AS NVARCHAR(MAX)) + ')' AS IdentityDefinition,
+                          object_id,
                           column_id
                      FROM sys.identity_columns
                   ) AS id
                ON id.object_id = @ObjectId
               AND id.column_id = @ColumnId
-              AND @ReturnDetails = 1;               
+              AND @ReturnDetails = 1;
 
 
 GO
@@ -3787,7 +3787,7 @@ GO
 CREATE FUNCTION tSQLt.Private_GetDefaultConstraintDefinition(@ObjectId INT, @ColumnId INT, @ReturnDetails BIT)
 RETURNS TABLE
 AS
-RETURN SELECT 
+RETURN SELECT
               COALESCE(IsDefault, 0) AS IsDefault,
               COALESCE(DefaultDefinition, '') AS DefaultDefinition
         FROM (SELECT 1) X(X)
@@ -3796,7 +3796,7 @@ RETURN SELECT
                   )dc
                ON dc.parent_object_id = @ObjectId
               AND dc.parent_column_id = @ColumnId
-              AND @ReturnDetails = 1;               
+              AND @ReturnDetails = 1;
 
 
 GO
@@ -3815,7 +3815,7 @@ RETURN
          ' ADD CONSTRAINT ' +
          QUOTENAME(OBJECT_NAME(@ConstraintObjectId)) +
          ' ' +
-         CASE WHEN KC.type_desc = 'UNIQUE_CONSTRAINT' 
+         CASE WHEN KC.type_desc = 'UNIQUE_CONSTRAINT'
               THEN 'UNIQUE'
               ELSE 'PRIMARY KEY'
            END +
@@ -3835,7 +3835,7 @@ RETURN
                ''
               ) +
          ');' AS CreateConstraintCmd,
-         CASE WHEN KC.type_desc = 'UNIQUE_CONSTRAINT' 
+         CASE WHEN KC.type_desc = 'UNIQUE_CONSTRAINT'
               THEN ''
               ELSE (
                      SELECT 'ALTER TABLE ' +
@@ -3873,20 +3873,20 @@ CREATE FUNCTION tSQLt.Private_CreateFakeTableStatement(
 RETURNS TABLE
 AS
 RETURN
-  SELECT 
+  SELECT
       'CREATE TABLE ' + @FullFakeTableName + '(' + STUFF(Cols,1,1,'') + ')' CreateTableStatement,
       'CREATE TYPE ' + @FullFakeTableName + ' AS TABLE(' + STUFF(Cols,1,1,'') + ')' CreateTableTypeStatement
-    FROM 
+    FROM
     (
       SELECT
       (
         SELECT
            ',' +
-           QUOTENAME(name) + 
+           QUOTENAME(name) +
            cc.ColumnDefinition +
-           dc.DefaultDefinition + 
+           dc.DefaultDefinition +
            id.IdentityDefinition +
-           CASE WHEN cc.IsComputedColumn = 1 OR id.IsIdentityColumn = 1 
+           CASE WHEN cc.IsComputedColumn = 1 OR id.IsIdentityColumn = 1
                 THEN ''
                 ELSE CASE WHEN @PreserveNOTNULL = 1 AND c.is_nullable = 0 THEN ' NOT NULL' ELSE ' NULL' END
            END
@@ -3914,7 +3914,7 @@ CREATE PROCEDURE tSQLt.Private_CreateFakeOfTable
 AS
 BEGIN
    DECLARE @cmd NVARCHAR(MAX) =
-     (SELECT CreateTableStatement 
+     (SELECT CreateTableStatement
         FROM tSQLt.Private_CreateFakeTableStatement(@OrigTableObjectId, @SchemaName+'.'+@TableName,@Identity,@ComputedColumns,@Defaults,0));
    EXEC (@cmd);
 END;
@@ -3937,7 +3937,7 @@ BEGIN
    DECLARE @TargetObjectFullName NVARCHAR(MAX) = NULL;
    DECLARE @OriginalObjectObjectId INT;
    DECLARE @TargetObjectObjectId INT;
-      
+
    IF(@TableName NOT IN (PARSENAME(@TableName,1),QUOTENAME(PARSENAME(@TableName,1)))
       AND @SchemaName IS NOT NULL)
    BEGIN
@@ -3947,7 +3947,7 @@ BEGIN
    SELECT @OrigObjectCleanQuotedSchemaName = CleanSchemaName,
           @OrigObjectCleanQuotedName = CleanTableName
      FROM tSQLt.Private_ResolveFakeTableNamesForBackwardCompatibility(@TableName, @SchemaName);
-   
+
    EXEC tSQLt.Private_ValidateFakeTableParameters @OrigObjectCleanQuotedSchemaName,@TableName,@SchemaName;
 
    SET @OrigObjectFullName = @OrigObjectCleanQuotedSchemaName + '.' + @OrigObjectCleanQuotedName;
@@ -3957,7 +3957,7 @@ BEGIN
    SET @OriginalObjectObjectId = OBJECT_ID(@OrigObjectCleanQuotedSchemaName + '.' + QUOTENAME(@OrigObjectNewName));
 
    SELECT @TargetObjectFullName = S.base_object_name
-     FROM sys.synonyms AS S 
+     FROM sys.synonyms AS S
     WHERE S.object_id = @OriginalObjectObjectId;
 
    IF(@TargetObjectFullName IS NOT NULL)
@@ -4005,31 +4005,31 @@ BEGIN
     DECLARE @IsOutput BIT;
     DECLARE @IsCursorRef BIT;
     DECLARE @IsTableType BIT;
-            
+
     DECLARE Parameters CURSOR FOR
      SELECT p.name, t.TypeName, p.is_output, p.is_cursor_ref, t.IsTableType
        FROM sys.parameters p
        CROSS APPLY tSQLt.Private_GetFullTypeName(p.user_type_id,p.max_length,p.precision,p.scale,NULL) t
       WHERE object_id = @ProcedureObjectId;
-    
+
     OPEN Parameters;
-    
+
     FETCH NEXT FROM Parameters INTO @ParamName, @TypeName, @IsOutput, @IsCursorRef, @IsTableType;
     WHILE (@@FETCH_STATUS = 0)
     BEGIN
         IF @IsCursorRef = 0
         BEGIN
-            SELECT @ProcParmListForInsert = @ProcParmListForInsert + @SeparatorWithoutCursor + 
-                                   CASE WHEN @IsTableType = 1 
-                                     THEN '(SELECT * FROM '+@ParamName+' FOR XML PATH(''row''),TYPE,ROOT('''+STUFF(@ParamName,1,1,'')+'''))' 
-                                     ELSE @ParamName 
-                                   END, 
-                   @TableColList = @TableColList + @SeparatorWithoutCursor + '[' + STUFF(@ParamName,1,1,'') + ']', 
-                   @ProcParmTypeList = @ProcParmTypeList + @SeparatorWithCursor + @ParamName + ' ' + @TypeName + 
-                                       CASE WHEN @IsTableType = 1 THEN ' READONLY' ELSE ' = NULL ' END+ 
-                                       CASE WHEN @IsOutput = 1 THEN ' OUT' ELSE '' END, 
-                   @TableColTypeList = @TableColTypeList + ',[' + STUFF(@ParamName,1,1,'') + '] ' + 
-                          CASE 
+            SELECT @ProcParmListForInsert = @ProcParmListForInsert + @SeparatorWithoutCursor +
+                                   CASE WHEN @IsTableType = 1
+                                     THEN '(SELECT * FROM '+@ParamName+' FOR XML PATH(''row''),TYPE,ROOT('''+STUFF(@ParamName,1,1,'')+'''))'
+                                     ELSE @ParamName
+                                   END,
+                   @TableColList = @TableColList + @SeparatorWithoutCursor + '[' + STUFF(@ParamName,1,1,'') + ']',
+                   @ProcParmTypeList = @ProcParmTypeList + @SeparatorWithCursor + @ParamName + ' ' + @TypeName +
+                                       CASE WHEN @IsTableType = 1 THEN ' READONLY' ELSE ' = NULL ' END+
+                                       CASE WHEN @IsOutput = 1 THEN ' OUT' ELSE '' END,
+                   @TableColTypeList = @TableColTypeList + ',[' + STUFF(@ParamName,1,1,'') + '] ' +
+                          CASE
                                WHEN @IsTableType = 1
                                THEN 'XML'
                                WHEN @TypeName LIKE '%nchar%'
@@ -4040,43 +4040,43 @@ BEGIN
                                ELSE @TypeName
                           END + ' NULL';
 
-            SELECT @SeparatorWithoutCursor = ',';        
+            SELECT @SeparatorWithoutCursor = ',';
         END
         ELSE
         BEGIN
             SELECT @ProcParmTypeList = @ProcParmTypeList + @SeparatorWithCursor + @ParamName + ' CURSOR VARYING OUTPUT';
         END;
-        SELECT 
-            @ProcParmListForCall = @ProcParmListForCall + @SeparatorWithCursor + @ParamName + 
-            CASE 
+        SELECT
+            @ProcParmListForCall = @ProcParmListForCall + @SeparatorWithCursor + @ParamName +
+            CASE
               WHEN @IsOutput = 1 AND @IsCursorRef <> 1
-                THEN ' OUT' 
-              ELSE '' 
+                THEN ' OUT'
+              ELSE ''
             END;
         SELECT @SeparatorWithCursor = ',';
 
         FETCH NEXT FROM Parameters INTO @ParamName, @TypeName, @IsOutput, @IsCursorRef, @IsTableType;
     END;
-    
+
     CLOSE Parameters;
     DEALLOCATE Parameters;
-    
+
     DECLARE @InsertStmt NVARCHAR(MAX);
-    SELECT @InsertStmt = 'INSERT INTO ' + @LogTableName + 
+    SELECT @InsertStmt = 'INSERT INTO ' + @LogTableName +
                          CASE WHEN @TableColList = '' THEN ' DEFAULT VALUES'
                               ELSE ' (' + @TableColList + ') SELECT ' + @ProcParmListForInsert
                          END + ';';
-                         
+
     SELECT @CreateLogTableStatement = 'CREATE TABLE ' + @LogTableName + ' (_id_ int IDENTITY(1,1) PRIMARY KEY CLUSTERED ' + @TableColTypeList + ');';
 
-    SELECT @CreateProcedureStatement = 
-             'CREATE PROCEDURE ' + @OriginalProcedureName + ' ' + @ProcParmTypeList + 
-             ' AS BEGIN ' + 
-                ISNULL(@InsertStmt,'') + 
+    SELECT @CreateProcedureStatement =
+             'CREATE PROCEDURE ' + @OriginalProcedureName + ' ' + @ProcParmTypeList +
+             ' AS BEGIN ' +
+                ISNULL(@InsertStmt,'') +
                 ISNULL('DECLARE @SpyProcedureOriginalObjectName NVARCHAR(MAX) = '''+REPLACE(QUOTENAME(OBJECT_SCHEMA_NAME(@ProcedureObjectId))+'.'+QUOTENAME(@UnquotedNewNameOfProcedure),'''','''''')+''';','')+
                 ISNULL(@CommandToExecute + ';', '') +
                 CHAR(13)+CHAR(10)+/*CR,LF*/
-                CASE WHEN @CallOriginal = 1 
+                CASE WHEN @CallOriginal = 1
                      THEN 'EXEC @SpyProcedureOriginalObjectName ' + @ProcParmListForCall + ';'
                      ELSE ''
                 END +
@@ -4113,7 +4113,7 @@ BEGIN
     BEGIN
       RAISERROR('Cannot use SpyProcedure on %s because the procedure does not exist', 16, 10, @ProcedureName) WITH NOWAIT;
     END;
-    
+
     IF (1020 < (SELECT COUNT(*) FROM sys.parameters WHERE object_id = OBJECT_ID(@ProcedureName)))
     BEGIN
       RAISERROR('Cannot use SpyProcedure on procedure %s because it contains more than 1020 parameters', 16, 10, @ProcedureName) WITH NOWAIT;
@@ -4177,17 +4177,17 @@ GO
 GO
 CREATE FUNCTION tSQLt.Private_GetCommaSeparatedColumnList (@Table NVARCHAR(MAX), @ExcludeColumn NVARCHAR(MAX))
 RETURNS NVARCHAR(MAX)
-AS 
+AS
 BEGIN
   RETURN STUFF((
-     SELECT ',' + CASE WHEN system_type_id = TYPE_ID('timestamp') THEN ';TIMESTAMP columns are unsupported!;' ELSE QUOTENAME(name) END 
-       FROM sys.columns 
-      WHERE object_id = OBJECT_ID(@Table) 
-        AND name <> @ExcludeColumn 
+     SELECT ',' + CASE WHEN system_type_id = TYPE_ID('timestamp') THEN ';TIMESTAMP columns are unsupported!;' ELSE QUOTENAME(name) END
+       FROM sys.columns
+      WHERE object_id = OBJECT_ID(@Table)
+        AND name <> @ExcludeColumn
       ORDER BY column_id
      FOR XML PATH(''), TYPE).value('.','NVARCHAR(MAX)')
     ,1, 1, '');
-        
+
 END;
 GO
 
@@ -4203,7 +4203,7 @@ AS
 BEGIN
   DECLARE @Cmd NVARCHAR(MAX);
   SET @Cmd = '
-     SELECT TOP(0) ''>'' AS ' + @ResultColumn + ', Expected.* INTO ' + @ResultTable + ' 
+     SELECT TOP(0) ''>'' AS ' + @ResultColumn + ', Expected.* INTO ' + @ResultTable + '
        FROM ' + @BaseTable + ' AS Expected RIGHT JOIN ' + @BaseTable + ' AS X ON 1=0; '
   EXEC(@Cmd);
   EXEC tSQLt.Private_MarktSQLtTempObject @ObjectName = @ResultTable, @ObjectType = N'TABLE';
@@ -4246,7 +4246,7 @@ BEGIN
    DECLARE @OutputColumnList NVARCHAR(MAX);
    SELECT @OutputColumnList = '[_m_],' + @ColumnList;
    EXEC tSQLt.TableToText @TableName = @ResultTable, @OrderBy = @ResultColumn, @PrintOnlyColumnNameAliasList = @OutputColumnList, @txt = @TableToTextResult OUTPUT;
-   
+
    DECLARE @Message NVARCHAR(MAX);
    SELECT @Message = @FailMsg + CHAR(13) + CHAR(10);
 
@@ -4270,51 +4270,51 @@ BEGIN
     DECLARE @cmd NVARCHAR(MAX);
     DECLARE @RestoredRowIndexCounterColName NVARCHAR(MAX);
     SET @RestoredRowIndexCounterColName = @MatchIndicatorColumnName + '_RR';
-    
-    SELECT @cmd = 
+
+    SELECT @cmd =
     '
-    INSERT INTO ' + @ResultTable + ' (' + @MatchIndicatorColumnName + ', ' + @ColumnList + ') 
-    SELECT 
-      CASE 
+    INSERT INTO ' + @ResultTable + ' (' + @MatchIndicatorColumnName + ', ' + @ColumnList + ')
+    SELECT
+      CASE
         WHEN RestoredRowIndex.'+@RestoredRowIndexCounterColName+' <= CASE WHEN [_{Left}_]<[_{Right}_] THEN [_{Left}_] ELSE [_{Right}_] END
-         THEN ''='' 
-        WHEN RestoredRowIndex.'+@RestoredRowIndexCounterColName+' <= [_{Left}_] 
-         THEN ''<'' 
-        ELSE ''>'' 
+         THEN ''=''
+        WHEN RestoredRowIndex.'+@RestoredRowIndexCounterColName+' <= [_{Left}_]
+         THEN ''<''
+        ELSE ''>''
       END AS ' + @MatchIndicatorColumnName + ', ' + @ColumnList + '
     FROM(
-      SELECT SUM([_{Left}_]) AS [_{Left}_], 
-             SUM([_{Right}_]) AS [_{Right}_], 
-             ' + @ColumnList + ' 
+      SELECT SUM([_{Left}_]) AS [_{Left}_],
+             SUM([_{Right}_]) AS [_{Right}_],
+             ' + @ColumnList + '
       FROM (
         SELECT 1 AS [_{Left}_], 0[_{Right}_], ' + @ColumnList + '
           FROM ' + @Expected + '
-        UNION ALL 
-        SELECT 0[_{Left}_], 1 AS [_{Right}_], ' + @ColumnList + ' 
+        UNION ALL
+        SELECT 0[_{Left}_], 1 AS [_{Right}_], ' + @ColumnList + '
           FROM ' + @Actual + '
-      ) AS X 
-      GROUP BY ' + @ColumnList + ' 
+      ) AS X
+      GROUP BY ' + @ColumnList + '
     ) AS CollapsedRows
     CROSS APPLY (
-       SELECT TOP(CASE WHEN [_{Left}_]>[_{Right}_] THEN [_{Left}_] 
-                       ELSE [_{Right}_] END) 
-              ROW_NUMBER() OVER(ORDER BY(SELECT 1)) 
-         FROM (SELECT 1 
+       SELECT TOP(CASE WHEN [_{Left}_]>[_{Right}_] THEN [_{Left}_]
+                       ELSE [_{Right}_] END)
+              ROW_NUMBER() OVER(ORDER BY(SELECT 1))
+         FROM (SELECT 1
                  FROM ' + @Actual + ' UNION ALL SELECT 1 FROM ' + @Expected + ') X(X)
               ) AS RestoredRowIndex(' + @RestoredRowIndexCounterColName + ');';
-    
+
     EXEC (@cmd); --MainGroupQuery
-    
-    SET @cmd = 'SET @r = 
+
+    SET @cmd = 'SET @r =
          CASE WHEN EXISTS(
-                  SELECT 1 
-                    FROM ' + @ResultTable + 
-                 ' WHERE ' + @MatchIndicatorColumnName + ' IN (''<'', ''>'')) 
-              THEN 1 ELSE 0 
+                  SELECT 1
+                    FROM ' + @ResultTable +
+                 ' WHERE ' + @MatchIndicatorColumnName + ' IN (''<'', ''>''))
+              THEN 1 ELSE 0
          END';
     DECLARE @UnequalRowsExist INT;
     EXEC sp_executesql @cmd, N'@r INT OUTPUT',@UnequalRowsExist OUTPUT;
-    
+
     RETURN @UnequalRowsExist;
 END;
 
@@ -4401,142 +4401,142 @@ BEGIN
     EXEC tSQLt.AssertObjectExists @Expected;
     EXEC tSQLt.AssertObjectExists @Actual;
 
-    DECLARE @ResultTable NVARCHAR(MAX);    
-    DECLARE @ResultTableWithSchema NVARCHAR(MAX);    
-    DECLARE @ResultColumn NVARCHAR(MAX);    
-    DECLARE @ColumnList NVARCHAR(MAX);    
+    DECLARE @ResultTable NVARCHAR(MAX);
+    DECLARE @ResultTableWithSchema NVARCHAR(MAX);
+    DECLARE @ResultColumn NVARCHAR(MAX);
+    DECLARE @ColumnList NVARCHAR(MAX);
     DECLARE @UnequalRowsExist INT;
     DECLARE @CombinedMessage NVARCHAR(MAX);
 
     SELECT @ResultTable = tSQLt.Private::CreateUniqueObjectName();
     SELECT @ResultColumn = 'RC_' + @ResultTable;
-    SELECT @ResultTableWithSchema = 'tSQLt.' + @ResultTable; 
+    SELECT @ResultTableWithSchema = 'tSQLt.' + @ResultTable;
 
-    EXEC tSQLt.Private_CreateResultTableForCompareTables 
+    EXEC tSQLt.Private_CreateResultTableForCompareTables
       @ResultTable = @ResultTableWithSchema,
       @ResultColumn = @ResultColumn,
       @BaseTable = @Expected;
-        
+
     SELECT @ColumnList = tSQLt.Private_GetCommaSeparatedColumnList(@ResultTableWithSchema, @ResultColumn);
 
-    EXEC tSQLt.Private_ValidateThatAllDataTypesInTableAreSupported @ResultTableWithSchema, @ColumnList;    
-    
-    EXEC @UnequalRowsExist = tSQLt.Private_CompareTables 
+    EXEC tSQLt.Private_ValidateThatAllDataTypesInTableAreSupported @ResultTableWithSchema, @ColumnList;
+
+    EXEC @UnequalRowsExist = tSQLt.Private_CompareTables
       @Expected = @Expected,
       @Actual = @Actual,
       @ResultTable = @ResultTableWithSchema,
       @ColumnList = @ColumnList,
       @MatchIndicatorColumnName = @ResultColumn;
-        
+
     SET @CombinedMessage = ISNULL(@Message + CHAR(13) + CHAR(10),'') + @FailMsg;
-    EXEC tSQLt.Private_CompareTablesFailIfUnequalRowsExists 
+    EXEC tSQLt.Private_CompareTablesFailIfUnequalRowsExists
       @UnequalRowsExist = @UnequalRowsExist,
       @ResultTable = @ResultTableWithSchema,
       @ResultColumn = @ResultColumn,
       @ColumnList = @ColumnList,
-      @FailMsg = @CombinedMessage;   
+      @FailMsg = @CombinedMessage;
 END;
 
 
 GO
 
 GO
-CREATE PROCEDURE tSQLt.StubRecord(@SnTableName AS NVARCHAR(MAX), @BintObjId AS BIGINT)  
-AS   
-BEGIN  
+CREATE PROCEDURE tSQLt.StubRecord(@SnTableName AS NVARCHAR(MAX), @BintObjId AS BIGINT)
+AS
+BEGIN
 
     RAISERROR('Warning, tSQLt.StubRecord is not currently supported. Use at your own risk!', 0, 1) WITH NOWAIT;
 
-    DECLARE @VcInsertStmt NVARCHAR(MAX),  
-            @VcInsertValues NVARCHAR(MAX);  
-    DECLARE @SnColumnName NVARCHAR(MAX); 
-    DECLARE @SintDataType SMALLINT; 
-    DECLARE @NvcFKCmd NVARCHAR(MAX);  
-    DECLARE @VcFKVal NVARCHAR(MAX); 
-  
-    SET @VcInsertStmt = 'INSERT INTO ' + @SnTableName + ' ('  
-      
-    DECLARE curColumns CURSOR  
-        LOCAL FAST_FORWARD  
-    FOR  
-    SELECT syscolumns.name,  
-           syscolumns.xtype,  
-           cmd.cmd  
-    FROM syscolumns  
-        LEFT OUTER JOIN dbo.sysconstraints ON syscolumns.id = sysconstraints.id  
-                                      AND syscolumns.colid = sysconstraints.colid  
-                                      AND sysconstraints.status = 1    -- Primary key constraints only  
-        LEFT OUTER JOIN (select fkeyid id,fkey colid,N'select @V=cast(min('+syscolumns.name+') as NVARCHAR) from '+sysobjects.name cmd  
-                        from sysforeignkeys   
-                        join sysobjects on sysobjects.id=sysforeignkeys.rkeyid  
-                        join syscolumns on sysobjects.id=syscolumns.id and syscolumns.colid=rkey) cmd  
-            on cmd.id=syscolumns.id and cmd.colid=syscolumns.colid  
-    WHERE syscolumns.id = OBJECT_ID(@SnTableName)  
-      AND (syscolumns.isnullable = 0 )  
-    ORDER BY ISNULL(sysconstraints.status, 9999), -- Order Primary Key constraints first  
-             syscolumns.colorder  
-  
-    OPEN curColumns  
-  
-    FETCH NEXT FROM curColumns  
-    INTO @SnColumnName, @SintDataType, @NvcFKCmd  
-  
-    -- Treat the first column retrieved differently, no commas need to be added  
-    -- and it is the ObjId column  
-    IF @@FETCH_STATUS = 0  
-    BEGIN  
-        SET @VcInsertStmt = @VcInsertStmt + @SnColumnName  
-        SELECT @VcInsertValues = ')VALUES(' + ISNULL(CAST(@BintObjId AS nvarchar), 'NULL')  
-  
-        FETCH NEXT FROM curColumns  
-        INTO @SnColumnName, @SintDataType, @NvcFKCmd  
-    END  
-    ELSE  
-    BEGIN  
-        -- No columns retrieved, we need to insert into any first column  
-        SELECT @VcInsertStmt = @VcInsertStmt + syscolumns.name  
-        FROM syscolumns  
-        WHERE syscolumns.id = OBJECT_ID(@SnTableName)  
-          AND syscolumns.colorder = 1  
-  
-        SELECT @VcInsertValues = ')VALUES(' + ISNULL(CAST(@BintObjId AS nvarchar), 'NULL')  
-  
-    END  
-  
-    WHILE @@FETCH_STATUS = 0  
-    BEGIN  
-        SET @VcInsertStmt = @VcInsertStmt + ',' + @SnColumnName  
-        SET @VcFKVal=',0'  
-        if @NvcFKCmd is not null  
-        BEGIN  
-            set @VcFKVal=null  
-            exec sp_executesql @NvcFKCmd,N'@V NVARCHAR(MAX) output',@VcFKVal output  
-            set @VcFKVal=isnull(','''+@VcFKVal+'''',',NULL')  
-        END  
-        SET @VcInsertValues = @VcInsertValues + @VcFKVal  
-  
-        FETCH NEXT FROM curColumns  
-        INTO @SnColumnName, @SintDataType, @NvcFKCmd  
-    END  
-      
-    CLOSE curColumns  
-    DEALLOCATE curColumns  
-  
-    SET @VcInsertStmt = @VcInsertStmt + @VcInsertValues + ')'  
-  
-    IF EXISTS (SELECT 1   
-               FROM syscolumns  
-               WHERE status = 128   
-                 AND id = OBJECT_ID(@SnTableName))  
-    BEGIN  
-        SET @VcInsertStmt = 'SET IDENTITY_INSERT ' + @SnTableName + ' ON ' + CHAR(10) +   
-                             @VcInsertStmt + CHAR(10) +   
-                             'SET IDENTITY_INSERT ' + @SnTableName + ' OFF '  
-    END  
-  
-    EXEC (@VcInsertStmt)    -- Execute the actual INSERT statement  
-  
-END  
+    DECLARE @VcInsertStmt NVARCHAR(MAX),
+            @VcInsertValues NVARCHAR(MAX);
+    DECLARE @SnColumnName NVARCHAR(MAX);
+    DECLARE @SintDataType SMALLINT;
+    DECLARE @NvcFKCmd NVARCHAR(MAX);
+    DECLARE @VcFKVal NVARCHAR(MAX);
+
+    SET @VcInsertStmt = 'INSERT INTO ' + @SnTableName + ' ('
+
+    DECLARE curColumns CURSOR
+        LOCAL FAST_FORWARD
+    FOR
+    SELECT syscolumns.name,
+           syscolumns.xtype,
+           cmd.cmd
+    FROM syscolumns
+        LEFT OUTER JOIN dbo.sysconstraints ON syscolumns.id = sysconstraints.id
+                                      AND syscolumns.colid = sysconstraints.colid
+                                      AND sysconstraints.status = 1    -- Primary key constraints only
+        LEFT OUTER JOIN (select fkeyid id,fkey colid,N'select @V=cast(min('+syscolumns.name+') as NVARCHAR) from '+sysobjects.name cmd
+                        from sysforeignkeys
+                        join sysobjects on sysobjects.id=sysforeignkeys.rkeyid
+                        join syscolumns on sysobjects.id=syscolumns.id and syscolumns.colid=rkey) cmd
+            on cmd.id=syscolumns.id and cmd.colid=syscolumns.colid
+    WHERE syscolumns.id = OBJECT_ID(@SnTableName)
+      AND (syscolumns.isnullable = 0 )
+    ORDER BY ISNULL(sysconstraints.status, 9999), -- Order Primary Key constraints first
+             syscolumns.colorder
+
+    OPEN curColumns
+
+    FETCH NEXT FROM curColumns
+    INTO @SnColumnName, @SintDataType, @NvcFKCmd
+
+    -- Treat the first column retrieved differently, no commas need to be added
+    -- and it is the ObjId column
+    IF @@FETCH_STATUS = 0
+    BEGIN
+        SET @VcInsertStmt = @VcInsertStmt + @SnColumnName
+        SELECT @VcInsertValues = ')VALUES(' + ISNULL(CAST(@BintObjId AS nvarchar), 'NULL')
+
+        FETCH NEXT FROM curColumns
+        INTO @SnColumnName, @SintDataType, @NvcFKCmd
+    END
+    ELSE
+    BEGIN
+        -- No columns retrieved, we need to insert into any first column
+        SELECT @VcInsertStmt = @VcInsertStmt + syscolumns.name
+        FROM syscolumns
+        WHERE syscolumns.id = OBJECT_ID(@SnTableName)
+          AND syscolumns.colorder = 1
+
+        SELECT @VcInsertValues = ')VALUES(' + ISNULL(CAST(@BintObjId AS nvarchar), 'NULL')
+
+    END
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @VcInsertStmt = @VcInsertStmt + ',' + @SnColumnName
+        SET @VcFKVal=',0'
+        if @NvcFKCmd is not null
+        BEGIN
+            set @VcFKVal=null
+            exec sp_executesql @NvcFKCmd,N'@V NVARCHAR(MAX) output',@VcFKVal output
+            set @VcFKVal=isnull(','''+@VcFKVal+'''',',NULL')
+        END
+        SET @VcInsertValues = @VcInsertValues + @VcFKVal
+
+        FETCH NEXT FROM curColumns
+        INTO @SnColumnName, @SintDataType, @NvcFKCmd
+    END
+
+    CLOSE curColumns
+    DEALLOCATE curColumns
+
+    SET @VcInsertStmt = @VcInsertStmt + @VcInsertValues + ')'
+
+    IF EXISTS (SELECT 1
+               FROM syscolumns
+               WHERE status = 128
+                 AND id = OBJECT_ID(@SnTableName))
+    BEGIN
+        SET @VcInsertStmt = 'SET IDENTITY_INSERT ' + @SnTableName + ' ON ' + CHAR(10) +
+                             @VcInsertStmt + CHAR(10) +
+                             'SET IDENTITY_INSERT ' + @SnTableName + ' OFF '
+    END
+
+    EXEC (@VcInsertStmt)    -- Execute the actual INSERT statement
+
+END
 
 GO
 
@@ -4544,7 +4544,7 @@ GO
 GO
 
 GO
-CREATE PROCEDURE [tSQLt].[AssertLike] 
+CREATE PROCEDURE [tSQLt].[AssertLike]
   @ExpectedPattern NVARCHAR(MAX),
   @Actual NVARCHAR(MAX),
   @Message NVARCHAR(MAX) = ''
@@ -4580,8 +4580,8 @@ BEGIN
   OR (@Expected IS NULL AND @Actual IS NULL)
   BEGIN
     DECLARE @Msg NVARCHAR(MAX);
-    SET @Msg = 'Expected actual value to not ' + 
-               COALESCE('equal <' + tSQLt.Private_SqlVariantFormatter(@Expected)+'>', 'be NULL') + 
+    SET @Msg = 'Expected actual value to not ' +
+               COALESCE('equal <' + tSQLt.Private_SqlVariantFormatter(@Expected)+'>', 'be NULL') +
                '.';
     EXEC tSQLt.Fail @Message,@Msg;
   END;
@@ -4636,7 +4636,7 @@ BEGIN
   DECLARE @exists INT;
   SET @cmd = 'SELECT @exists = CASE WHEN EXISTS(SELECT 1 FROM '+@FullName+') THEN 1 ELSE 0 END;'
   EXEC sp_executesql @cmd,N'@exists INT OUTPUT', @exists OUTPUT;
-  
+
   IF(@exists = 1)
   BEGIN
     DECLARE @TableToText NVARCHAR(MAX);
@@ -4663,24 +4663,24 @@ BEGIN
   BEGIN
     RAISERROR('%s does not exist or was not faked by tSQLt.FakeTable.', 16, 10, @TableName);
   END;
-  
+
   DECLARE @FullTriggerName NVARCHAR(MAX);
   DECLARE @TriggerObjectId INT;
   SELECT @FullTriggerName = QUOTENAME(SCHEMA_NAME(schema_id))+'.'+QUOTENAME(name), @TriggerObjectId = object_id
   FROM sys.objects WHERE PARSENAME(@TriggerName,1) = name AND parent_object_id = @OrgTableObjectId;
-  
+
   DECLARE @TriggerCode NVARCHAR(MAX);
   SELECT @TriggerCode = m.definition
     FROM sys.sql_modules m
    WHERE m.object_id = @TriggerObjectId;
-  
+
   IF (@TriggerCode IS NULL)
   BEGIN
     RAISERROR('%s is not a trigger on %s', 16, 10, @TriggerName, @TableName);
   END;
- 
+
   EXEC tSQLt.RemoveObject @ObjectName = @FullTriggerName, @NewName = @NewNameOfOriginalTrigger OUTPUT;
-  
+
   EXEC(@TriggerCode);
 
   EXEC tSQLt.Private_MarktSQLtTempObject @ObjectName = @FullTriggerName, @ObjectType = N'TRIGGER', @NewNameOfOriginalObject = @NewNameOfOriginalTrigger;
@@ -4697,29 +4697,29 @@ CREATE FUNCTION tSQLt.Private_CreateFakeFunctionStatement(
 RETURNS TABLE
 AS
 RETURN
-  SELECT 
-      'CREATE FUNCTION ' + QUOTENAME(OBJECT_SCHEMA_NAME(@FunctionObjectId)) + '.' + QUOTENAME(OBJECT_NAME(@FunctionObjectId)) + 
+  SELECT
+      'CREATE FUNCTION ' + QUOTENAME(OBJECT_SCHEMA_NAME(@FunctionObjectId)) + '.' + QUOTENAME(OBJECT_NAME(@FunctionObjectId)) +
       '(' +
-      ISNULL(PAS.ParametersAndReturnScalar, '') + 
+      ISNULL(PAS.ParametersAndReturnScalar, '') +
       ISNULL(') RETURNS TABLE AS RETURN ' + T.TypeOnlySelectStatement,'') + ';' CreateStatement,
       T.TypeOnlySelectStatement
     FROM
     (
-      SELECT 
+      SELECT
           (
-            SELECT 
-              CASE P.is_output 
+            SELECT
+              CASE P.is_output
               WHEN 0 THEN CASE WHEN P._RN_ = 1 THEN '' ELSE ',' END +P.name+' '+T.TypeName
               WHEN 1 THEN ') RETURNS '+T.TypeName+' AS BEGIN RETURN CAST('+ISNULL(''''+@ReturnValue+'''','NULL')+' AS '+T.TypeName+'); END'
               END
-              FROM 
+              FROM
               (
                 SELECT
                     ROW_NUMBER()OVER(ORDER BY PP.is_output ASC,PP.parameter_id ASC) _RN_,
                     PP.*
                   FROM
                   (
-                    SELECT  
+                    SELECT
                         object_id,
                         name,
                         parameter_id,
@@ -4740,22 +4740,22 @@ RETURN
     )PAS
     CROSS JOIN
     (
-      SELECT 
+      SELECT
           (
-            SELECT 
-              CASE WHEN P.column_id = 1 
-                THEN 'SELECT TOP(0) ' 
-                ELSE ',' 
-              END + 
+            SELECT
+              CASE WHEN P.column_id = 1
+                THEN 'SELECT TOP(0) '
+                ELSE ','
+              END +
               'CAST(NULL AS '+T.TypeName+') AS '+QUOTENAME(P.name)
-              FROM 
+              FROM
               (
                 SELECT
                     ROW_NUMBER()OVER(ORDER BY PP.column_id ASC) _RN_,
                     PP.*
                   FROM
                   (
-                    SELECT  
+                    SELECT
                         object_id,
                         name,
                         column_id,
@@ -4805,15 +4805,15 @@ BEGIN
       RAISERROR ('Both @FakeFunctionName and @FakeDataSource are valued. Please use only one.', 16, 10);
    END;
 
-   IF (@FakeDataSource IS NOT NULL ) 
+   IF (@FakeDataSource IS NOT NULL )
    BEGIN
       IF NOT EXISTS (
          SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(@FunctionName) and type in ('TF', 'IF', 'FT')
-      ) 
+      )
       BEGIN
          RAISERROR('You can use @FakeDataSource only with Inline, Multi-Statement or CLR Table-Valued functions.', 16, 10);
       END
-    
+
    RETURN 0;
    END
 
@@ -4822,7 +4822,7 @@ BEGIN
   BEGIN
     RAISERROR('%s does not exist!',16,10,@FakeFunctionName);
   END;
-  
+
   DECLARE @FunctionType CHAR(2);
   DECLARE @FakeFunctionType CHAR(2);
   SELECT @FunctionType = type FROM sys.objects WHERE object_id = @FunctionObjectId;
@@ -4833,14 +4833,14 @@ BEGIN
      (@FunctionType IN('TF','IF','FT') AND @FakeFunctionType NOT IN('TF','IF','FT'))
      OR
      (@FunctionType NOT IN('FN','FS','TF','IF','FT'))
-     )    
+     )
   BEGIN
     RAISERROR('Both parameters must contain the name of either scalar or table valued functions!',16,10);
   END;
-  
+
   SET @IsScalarFunction = CASE WHEN @FunctionType IN('FN','FS') THEN 1 ELSE 0 END;
-  
-  IF(EXISTS(SELECT 1 
+
+  IF(EXISTS(SELECT 1
               FROM sys.parameters AS P
              WHERE P.object_id IN(@FunctionObjectId,@FakeFunctionObjectId)
              GROUP BY P.name, P.max_length, P.precision, P.scale, P.parameter_id
@@ -4848,7 +4848,7 @@ BEGIN
            ))
   BEGIN
     RAISERROR('Parameters of both functions must match! (This includes the return type for scalar functions.)',16,10);
-  END; 
+  END;
 END;
 GO
 
@@ -4862,7 +4862,7 @@ CREATE PROCEDURE tSQLt.Private_CreateFakeFunction
   @FunctionObjectId     INT = NULL,
   @FakeFunctionObjectId INT = NULL,
   @IsScalarFunction     BIT = NULL,
-  @FakeDataSource       NVARCHAR(MAX) = NULL 
+  @FakeDataSource       NVARCHAR(MAX) = NULL
 AS
 BEGIN
   DECLARE @ReturnType NVARCHAR(MAX);
@@ -4871,7 +4871,7 @@ BEGIN
    CROSS APPLY tSQLt.Private_GetFullTypeName(P.user_type_id,P.max_length,P.precision,P.scale,NULL) AS T
    WHERE P.object_id = @FunctionObjectId
      AND P.parameter_id = 0;
-     
+
   DECLARE @ParameterList NVARCHAR(MAX);
   SELECT @ParameterList = COALESCE(
      STUFF((SELECT ','+P.name+' '+T.TypeName+CASE WHEN T.IsTableType = 1 THEN ' READONLY' ELSE '' END
@@ -4882,7 +4882,7 @@ BEGIN
              ORDER BY P.parameter_id
                FOR XML PATH(''),TYPE
            ).value('.','NVARCHAR(MAX)'),1,1,''),'');
-           
+
   DECLARE @ParameterCallList NVARCHAR(MAX);
   SELECT @ParameterCallList = COALESCE(
      STUFF((SELECT ','+P.name
@@ -4897,15 +4897,15 @@ BEGIN
 
   IF(@IsScalarFunction = 1)
   BEGIN
-    EXEC('CREATE FUNCTION '+@FunctionName+'('+@ParameterList+') RETURNS '+@ReturnType+' AS BEGIN RETURN '+@FakeFunctionName+'('+@ParameterCallList+');END;'); 
+    EXEC('CREATE FUNCTION '+@FunctionName+'('+@ParameterList+') RETURNS '+@ReturnType+' AS BEGIN RETURN '+@FakeFunctionName+'('+@ParameterCallList+');END;');
   END
-  ELSE 
+  ELSE
   BEGIN
     DECLARE @cmd NVARCHAR(MAX);
     IF (@FakeDataSource IS NOT NULL)
     BEGIN
-       SET @cmd = 
-        CASE 
+       SET @cmd =
+        CASE
           WHEN OBJECT_ID(@FakeDataSource) IS NOT NULL THEN 'SELECT * FROM '+@FakeDataSource
           WHEN @FakeDataSource LIKE '(%)%(%)' THEN 'SELECT * FROM '+@FakeDataSource
           ELSE @FakeDataSource
@@ -4913,7 +4913,7 @@ BEGIN
     END
     ELSE
     BEGIN
-      SET @cmd = 'SELECT * FROM '+@FakeFunctionName+'('+@ParameterCallList+')'; 
+      SET @cmd = 'SELECT * FROM '+@FakeFunctionName+'('+@ParameterCallList+')';
     END;
     SET @cmd = 'CREATE FUNCTION '+@FunctionName+'('+@ParameterList+') RETURNS TABLE AS RETURN '+@cmd+';'
     EXEC(@cmd);
@@ -4937,7 +4937,7 @@ BEGIN
   DECLARE @IsScalarFunction BIT;
   DECLARE @NewNameOfOriginalFunction NVARCHAR(MAX);
 
-  EXEC tSQLt.Private_ValidateObjectsCompatibleWithFakeFunction 
+  EXEC tSQLt.Private_ValidateObjectsCompatibleWithFakeFunction
                @FunctionName = @FunctionName,
                @FakeFunctionName = @FakeFunctionName,
                @FakeDataSource   = @FakeDataSource,
@@ -4949,7 +4949,7 @@ BEGIN
                @ObjectName = @FunctionName,
                @NewName = @NewNameOfOriginalFunction OUTPUT;
 
-  EXEC tSQLt.Private_CreateFakeFunction 
+  EXEC tSQLt.Private_CreateFakeFunction
                @FunctionName = @FunctionName,
                @FakeFunctionName = @FakeFunctionName,
                @FakeDataSource   = @FakeDataSource,
@@ -4986,11 +4986,11 @@ BEGIN
       FROM sys.objects
      WHERE schema_id = SCHEMA_ID(@SchemaName)
        AND type NOT IN ('PK', 'F')
-    UNION ALL 
+    UNION ALL
     SELECT 'ALTER SCHEMA ' + QUOTENAME(@NewSchemaName) + ' TRANSFER XML SCHEMA COLLECTION::' + QUOTENAME(@SchemaName) + '.' + QUOTENAME(name) + ';' AS Cmd
       FROM sys.xml_schema_collections
      WHERE schema_id = SCHEMA_ID(@SchemaName)
-    UNION ALL 
+    UNION ALL
     SELECT 'ALTER SCHEMA ' + QUOTENAME(@NewSchemaName) + ' TRANSFER TYPE::' + QUOTENAME(@SchemaName) + '.' + QUOTENAME(name) + ';' AS Cmd
       FROM sys.types
      WHERE schema_id = SCHEMA_ID(@SchemaName)
@@ -5012,7 +5012,7 @@ CREATE PROCEDURE tSQLt.AssertEqualsTableSchema
     @Message NVARCHAR(MAX) = NULL
 AS
 BEGIN
-  SELECT 
+  SELECT
       RANK()OVER(ORDER BY C.column_id) [RANK(column_id)],
       C.name,
       CAST(C.system_type_id AS NVARCHAR(MAX))+QUOTENAME(TS.name) system_type_id,
@@ -5029,7 +5029,7 @@ BEGIN
     JOIN sys.types AS TU
       ON C.user_type_id = TU.user_type_id
    WHERE C.object_id = OBJECT_ID(@Expected);
-  SELECT 
+  SELECT
       RANK()OVER(ORDER BY C.column_id) [RANK(column_id)],
       C.name,
       CAST(C.system_type_id AS NVARCHAR(MAX))+QUOTENAME(TS.name) system_type_id,
@@ -5046,8 +5046,8 @@ BEGIN
     JOIN sys.types AS TU
       ON C.user_type_id = TU.user_type_id
    WHERE C.object_id = OBJECT_ID(@Actual);
-  
-  EXEC tSQLt.AssertEqualsTable '#Expected','#Actual',@Message=@Message,@FailMsg='Unexpected/missing column(s)';  
+
+  EXEC tSQLt.AssertEqualsTable '#Expected','#Actual',@Message=@Message,@FailMsg='Unexpected/missing column(s)';
 END;
 GO
 
@@ -5207,8 +5207,8 @@ RETURNS TABLE
 AS
 RETURN
   SELECT
-    CASE 
-      WHEN (X.QuotedName IS NULL) 
+    CASE
+      WHEN (X.QuotedName IS NULL)
         THEN 'INSERT INTO #NoTransaction VALUES(NULL);'
       ELSE 'IF(NOT EXISTS (SELECT 1 FROM sys.procedures WHERE object_id = OBJECT_ID('+X.QuotedName+'))) BEGIN RAISERROR(''Test CleanUp Procedure %s does not exist or is not a procedure.'',16,10,'+X.QuotedName+'); END;INSERT INTO #NoTransaction VALUES('+X.QuotedName+');'
     END AS AnnotationCmd
@@ -5244,12 +5244,12 @@ GO
 GO
 
 GO
-CREATE PROCEDURE tSQLt.Private_CreateInstallationInfo 
+CREATE PROCEDURE tSQLt.Private_CreateInstallationInfo
 -- Created as a stored procedure to make it testable.
 AS
 BEGIN
   DECLARE @cmd NVARCHAR(MAX);
-  SELECT 
+  SELECT
       @cmd = 'ALTER FUNCTION tSQLt.Private_InstallationInfo() RETURNS TABLE AS RETURN SELECT CAST('+
              CAST(I.SqlVersion AS NVARCHAR(MAX))+
              ' AS NUMERIC(10,2)) AS SqlVersion;'
@@ -5271,7 +5271,7 @@ CREATE PROCEDURE tSQLt.Private_UndoSingleTestDouble
     @OriginalName NVARCHAR(MAX)
 AS
 BEGIN
-   
+
 
    EXEC tSQLt.Private_RenameObject @SchemaName = @SchemaName,
                                    @ObjectName = @ObjectName,
@@ -5320,7 +5320,7 @@ BEGIN
   /*-- Attempting to rename two or more non-temp objects to the same name --*/
 
   IF(EXISTS(
-    SELECT O.schema_id, ROL.OriginalName, COUNT(1) cnt 
+    SELECT O.schema_id, ROL.OriginalName, COUNT(1) cnt
       FROM tSQLt.Private_RenamedObjectLog ROL
       JOIN sys.objects O
         ON ROL.ObjectId = O.object_id
@@ -5335,7 +5335,7 @@ BEGIN
   ))
   BEGIN
     WITH S AS(
-      SELECT 
+      SELECT
           C.Id,
           C.OriginalName,
           C.CurrentName,
@@ -5355,7 +5355,7 @@ BEGIN
        WHERE C.Cnt>1
     ),
     ErrorTableLists AS(
-      SELECT 
+      SELECT
           '{'+C.CList+'}-->' + QUOTENAME(SO.SchemaName)+'.'+QUOTENAME(PARSENAME(SO.OriginalName,1)) ErrorTableList,
           QUOTENAME(SO.SchemaName)+'.'+QUOTENAME(PARSENAME(SO.OriginalName,1)) FullOriginalName
         FROM (SELECT DISTINCT SchemaName, OriginalName FROM S) SO
@@ -5389,7 +5389,7 @@ BEGIN
   END;
   IF(@ErrorMessage <> '')
   BEGIN
-    IF (@Force = 1) 
+    IF (@Force = 1)
     BEGIN
       SET @ErrorMessage = 'WARNING: @Force has been set to 1. Overriding the following error(s):'+@ErrorMessage;
       EXEC tSQLt.Private_Print @Message = @ErrorMessage;
@@ -5414,7 +5414,7 @@ BEGIN
 
   WITH MarkedTestDoubles AS
   (
-    SELECT 
+    SELECT
         TempO.Name,
         SCHEMA_NAME(TempO.schema_id) SchemaName,
         TempO.type ObjectType
@@ -5425,17 +5425,17 @@ BEGIN
        AND EP.name = 'tSQLt.IsTempObject'
        AND EP.value = 1
   )
-  SELECT @cmd = 
+  SELECT @cmd =
   (
-    SELECT 
-        DC.cmd+';'  
+    SELECT
+        DC.cmd+';'
       FROM MarkedTestDoubles MTD
      CROSS APPLY tSQLt.Private_GetDropItemCmd(QUOTENAME(MTD.SchemaName)+'.'+QUOTENAME(MTD.Name),MTD.ObjectType) DC
        FOR XML PATH(''),TYPE
   ).value('.','NVARCHAR(MAX)');
   EXEC(@cmd);
 
-  SELECT @cmd = 
+  SELECT @cmd =
   (
     SELECT
         DC.cmd+';'
@@ -5447,7 +5447,7 @@ BEGIN
                 ROL.OriginalName,
                 O.object_id,
                 O.type ObjectType,
-                SCHEMA_NAME(O.schema_id) SchemaName, 
+                SCHEMA_NAME(O.schema_id) SchemaName,
                 O.name CurrentName,
                 ROW_NUMBER()OVER(PARTITION BY O.schema_id, ROL.OriginalName ORDER BY ROL.Id) RN
               FROM #RenamedObjects AS ROL
@@ -5464,7 +5464,7 @@ BEGIN
 
   WITH LL AS
   (
-    SELECT 
+    SELECT
         ROL.Id,
         ParentROL.Id ParentId,
         ISNULL(ParentROL.Id,ROL.Id) SortId,
@@ -5480,7 +5480,7 @@ BEGIN
   ),
   L AS
   (
-    SELECT 
+    SELECT
         LL.Id,
         LL.ParentId,
         LL.SortId,
@@ -5499,11 +5499,11 @@ BEGIN
        AND EP.name = 'tSQLt.IsTempObject'
        AND EP.value = 1
   )
-  SELECT @cmd = 
+  SELECT @cmd =
   (
-    SELECT 
-        ISNULL(CASE 
-                 WHEN L.ParentId IS NULL THEN DC.cmd+';'  
+    SELECT
+        ISNULL(CASE
+                 WHEN L.ParentId IS NULL THEN DC.cmd+';'
                  ELSE NULL
                END,'')+
         'EXEC tSQLt.Private_RenameObject '''+L.SchemaName+''','''+L.CurrentName+''','''+L.OriginalName+''';'
@@ -5525,13 +5525,13 @@ GO
 
 GO
 SET NOCOUNT ON;
-DECLARE @ver NVARCHAR(MAX); 
-DECLARE @match INT; 
+DECLARE @ver NVARCHAR(MAX);
+DECLARE @match INT;
 SELECT @ver = '| tSQLt Version: ' + I.Version,
        @match = CASE WHEN I.Version = I.ClrVersion THEN 1 ELSE 0 END
   FROM tSQLt.Info() AS I;
 SET @ver = @ver+SPACE(42-LEN(@ver))+'|';
- 
+
 RAISERROR('',0,1)WITH NOWAIT;
 RAISERROR('+-----------------------------------------+',0,1)WITH NOWAIT;
 RAISERROR('|                                         |',0,1)WITH NOWAIT;

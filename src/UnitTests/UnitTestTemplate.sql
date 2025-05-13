@@ -10,7 +10,7 @@ BEGIN TRY
 	-- 3. Roll everything back.
 	ROLLBACK TRANSACTION
 END TRY
-BEGIN CATCH	
+BEGIN CATCH
 	ROLLBACK TRANSACTION;
 
 	THROW 51000, 'Error in EducatorTableGetBySchoolId Unit Tests!', 16;

@@ -1,6 +1,6 @@
-IF EXISTS(SELECT * FROM information_schema.routines 
+IF EXISTS(SELECT * FROM information_schema.routines
 	WHERE routine_type = 'PROCEDURE' AND routine_schema = 'dbo' AND routine_name = 'ProvisionView')
-BEGIN 
+BEGIN
 	DROP PROCEDURE dbo.ProvisionView
 END
 GO
@@ -14,11 +14,11 @@ GO
 CREATE PROCEDURE dbo.ProvisionView
 (
 	@Schema VARCHAR(255),
-	@Name VARCHAR(255)	
+	@Name VARCHAR(255)
 )
 AS
 BEGIN
-	IF NOT EXISTS(SELECT * 
+	IF NOT EXISTS(SELECT *
 		FROM information_schema.views
 		WHERE table_schema = @Schema AND table_name = @Name)
 	BEGIN

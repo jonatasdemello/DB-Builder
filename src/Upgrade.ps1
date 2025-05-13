@@ -1,15 +1,15 @@
 <#
 .SYNOPSIS
-   Upgrade Database Using Powershell
+   Upgrade Local_DB Database Using Powershell
 .DESCRIPTION
    For debug details, run with: -verbose
    Parameters:
       server: 127.0.0.1
-      database: My_Local_DB
+      database: Local_DB
       username: <sqlUser>
       password: <sqlpassword>
 .EXAMPLE
-   Upgrade.ps1 -server 127.0.0.1 -database My_Local_DB -username <sqlUser> -password <sqlpassword>
+   Upgrade.ps1 -server 127.0.0.1 -database Local_DB -username <sqlUser> -password <sqlpassword>
 #>
 [cmdletbinding()]
 Param(

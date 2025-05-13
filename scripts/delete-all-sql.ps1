@@ -23,6 +23,6 @@ $folders = @(
 )
 
 foreach ( $folder in $folders ) {
-	Get-ChildItem *.sql -Path $folder -Recurse | select FullName
+	Get-ChildItem *.sql -Path $folder -Recurse | Select FullName
 }
 

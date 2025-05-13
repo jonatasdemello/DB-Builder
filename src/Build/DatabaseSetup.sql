@@ -12,10 +12,14 @@ BEGIN
 END
 GO
 
-IF EXISTS (SELECT [value] FROM sys.configurations WHERE [name] = N'clr enabled' and [value] = 0)
+-- Note: this is not supported on Microsoft Azure SQL Edge
+IF NOT EXISTS (SELECT 1 WHERE @@VERSION like '%edge%')
 BEGIN
-	EXEC sp_configure 'clr enabled', 1;
-	RECONFIGURE;
+	IF EXISTS (SELECT [value] FROM sys.configurations WHERE [name] = N'clr enabled' and [value] = 0)
+	BEGIN
+		EXEC sp_configure 'clr enabled', 1;
+		RECONFIGURE;
+	END
 END
 
 -- CRL requires this setting to be on (Azure/Linux)

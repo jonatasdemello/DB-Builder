@@ -1,6 +1,6 @@
-IMPORTANT 
+IMPORTANT
 
-Bcp files are sensitive to \r\n 
+Bcp files are sensitive to \r\n
 
 when we commit to Git it replaces the \r\n to \n
 

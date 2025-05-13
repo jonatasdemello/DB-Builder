@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-   Create and Upgrade Database Using Powershell
+   Create and Upgrade Local_DB Database Using Powershell - used in the Dockerfile
 .DESCRIPTION
    For debug details, run with: -verbose
    Parameters:
@@ -19,7 +19,7 @@ Param(
     [string]$Database,
     [string]$Username,
     [string]$Password,
-    [System.Boolean]$Force = $False
+    [switch]$Force
 )
 
 # -----------------------------------------------------------------------------

@@ -1,6 +1,6 @@
-IF EXISTS(SELECT * FROM information_schema.routines 
+IF EXISTS(SELECT * FROM information_schema.routines
 	WHERE routine_type = 'PROCEDURE' AND routine_schema = 'dbo' AND routine_name = 'ProvisionScalarFunction')
-BEGIN 
+BEGIN
 	DROP PROCEDURE dbo.ProvisionScalarFunction
 END
 GO
@@ -23,8 +23,8 @@ CREATE PROCEDURE dbo.ProvisionScalarFunction
 )
 AS
 BEGIN
-	IF NOT EXISTS(SELECT * 
-		FROM information_schema.routines 
+	IF NOT EXISTS(SELECT *
+		FROM information_schema.routines
 		WHERE routine_schema = @Schema AND routine_name = @Name)
 	BEGIN
 		DECLARE @SQL NVARCHAR(MAX)

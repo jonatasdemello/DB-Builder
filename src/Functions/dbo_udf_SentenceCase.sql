@@ -1,5 +1,5 @@
 IF EXISTS(SELECT * FROM information_schema.routines WHERE routine_type = 'function' AND routine_schema = 'dbo' AND routine_name = 'udf_SentenceCase')
-BEGIN 
+BEGIN
 	DROP FUNCTION [dbo].[udf_SentenceCase]
 END
 GO

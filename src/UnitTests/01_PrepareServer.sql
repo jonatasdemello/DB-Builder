@@ -53,7 +53,7 @@ SELECT @AssemblyKeyBytes =
 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000+
 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000+
 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000+
-0x000000000000000000 
+0x000000000000000000
   ,@AssemblyKeyThumbPrint = 0xE8FFF6F136D7B53E ;
 GO
 
@@ -106,7 +106,7 @@ BEGIN
     DECLARE @AssemblyKeyBytes VARBINARY(MAX);
     EXEC #Private_GetAssemblyKeyBytes @AssemblyKeyBytes = @AssemblyKeyBytes OUT;
     SELECT @TrustedHash = CONVERT(NVARCHAR(MAX),HASHBYTES('SHA2_512',@AssemblyKeyBytes),1);
-    SELECT @cmd = 
+    SELECT @cmd =
            'IF EXISTS(SELECT 1 FROM sys.trusted_assemblies WHERE hash = ' + @TrustedHash +' AND description = ''tSQLt Ephemeral'')'+
            'EXEC sys.sp_drop_trusted_assembly @hash = ' + @TrustedHash + ';';
     EXEC master.sys.sp_executesql @cmd;
@@ -135,7 +135,7 @@ BEGIN
   EXEC #Private_GetAssemblyKeyBytes @AssemblyKeyBytes OUT, @AssemblyKeyThumbPrint OUT;
   SET @cmd = 'IF EXISTS(SELECT * FROM sys.assemblies WHERE name = ''tSQLtAssemblyKey'') DROP ASSEMBLY tSQLtAssemblyKey;';
   EXEC @master_sys_sp_executesql @cmd;
-  SET @cmd2 = 'SELECT @cmd = ''DROP ASSEMBLY ''+QUOTENAME(A.name)+'';'''+ 
+  SET @cmd2 = 'SELECT @cmd = ''DROP ASSEMBLY ''+QUOTENAME(A.name)+'';'''+
               '  FROM master.sys.assemblies AS A'+
               ' WHERE A.clr_name LIKE ''tsqltassemblykey, %'';';
   EXEC sys.sp_executesql @cmd2,N'@cmd NVARCHAR(MAX) OUTPUT',@cmd OUT;
@@ -144,7 +144,7 @@ BEGIN
   IF(@ProductMajorVersion>=14)
   BEGIN
     SELECT @Hash = HASHBYTES('SHA2_512',@AssemblyKeyBytes);
-    SELECT @cmd = 
+    SELECT @cmd =
            'IF NOT EXISTS (SELECT * FROM sys.trusted_assemblies WHERE [hash] = @Hash)'+
            'BEGIN'+
            '  EXEC sys.sp_add_trusted_assembly @hash = @Hash, @description = N''tSQLt Ephemeral'';'+
@@ -153,7 +153,7 @@ BEGIN
            'END;';
     EXEC @master_sys_sp_executesql @cmd, N'@Hash VARBINARY(64) OUTPUT',@Hash OUT;
   END;
-  SELECT @cmd = 
+  SELECT @cmd =
          'CREATE ASSEMBLY tSQLtAssemblyKey AUTHORIZATION dbo FROM ' +
          CONVERT(NVARCHAR(MAX),@AssemblyKeyBytes,1) +
          ' WITH PERMISSION_SET = SAFE;'

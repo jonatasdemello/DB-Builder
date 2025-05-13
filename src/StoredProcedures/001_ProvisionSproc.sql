@@ -1,6 +1,6 @@
-IF EXISTS(SELECT * FROM information_schema.routines 
+IF EXISTS(SELECT * FROM information_schema.routines
 	WHERE routine_type = 'PROCEDURE' AND routine_schema = 'dbo' AND routine_name = 'ProvisionSproc')
-BEGIN 
+BEGIN
 	DROP PROCEDURE dbo.ProvisionSproc
 END
 GO
@@ -18,7 +18,7 @@ CREATE PROCEDURE dbo.ProvisionSproc
 )
 AS
 BEGIN
-	IF NOT EXISTS(SELECT * 
+	IF NOT EXISTS(SELECT *
 		FROM information_schema.routines
 		WHERE routine_type = 'PROCEDURE' AND routine_schema = @Schema AND routine_name = @Name)
 	BEGIN

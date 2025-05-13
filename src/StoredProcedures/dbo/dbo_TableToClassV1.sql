@@ -13,13 +13,13 @@ BEGIN
 	-- sysname = nvarchar(128) NOT NULL
 	declare @TableName nvarchar(255) = @TName;
 
-	with CTE_columns AS 
+	with CTE_columns AS
 	(
-	select 
+	select
 		replace(col.name, ' ', '_') ColumnName,
 		column_id ColumnId,
 		typ.name as DBType,
-		case typ.name 
+		case typ.name
 			when 'bigint' then 'long'
 			when 'binary' then 'byte[]'
 			when 'bit' then 'bool'
@@ -51,15 +51,15 @@ BEGIN
 			else 'UNKNOWN_' + typ.name
 		end ColumnType,
 		col.is_nullable as DBNullable,
-		case 
-			when col.is_nullable = 1 and typ.name in ('bigint', 'bit', 'date', 'datetime', 'datetime2', 'datetimeoffset', 'decimal', 'float', 'int', 'money', 'numeric', 'real', 'smalldatetime', 'smallint', 'smallmoney', 'time', 'tinyint', 'uniqueidentifier') 
-			then '?' 
-			else '' 
+		case
+			when col.is_nullable = 1 and typ.name in ('bigint', 'bit', 'date', 'datetime', 'datetime2', 'datetimeoffset', 'decimal', 'float', 'int', 'money', 'numeric', 'real', 'smalldatetime', 'smallint', 'smallmoney', 'time', 'tinyint', 'uniqueidentifier')
+			then '?'
+			else ''
 		end NullableSign
-	from 
+	from
 		sys.columns col
 		join sys.types typ on col.system_type_id = typ.system_type_id AND col.user_type_id = typ.user_type_id
-	where 
+	where
 		object_id = object_id(@TableName)
 	)
 	select '	public ' + ColumnType + NullableSign + ' ' + ColumnName + ' { get; set; }' as c1
