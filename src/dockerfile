@@ -1,0 +1,44 @@
+# Use the same version as our Azure Instance:
+FROM mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04 AS base-sql-build-stage
+
+# Note: this is a temporary password used for the local build only, not used in dev-prod
+ARG SA_PASSWORD="P@ssw0rd"
+ARG DB_NAME="Local_DB"
+
+ENV \
+    ACCEPT_EULA=Y \
+    MSSQL_DB_NAME=${DB_NAME} \
+    MSSQL_SA_PASSWORD=${SA_PASSWORD} \
+    MSSQL_PID=Developer \
+    MSSQL_TCP_PORT=1433 \
+    TZ=America/Toronto
+
+EXPOSE 1433
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    curl
+
+# Download and Install PowerShell
+RUN apt-get install -y wget
+RUN wget https://github.com/PowerShell/PowerShell/releases/download/v7.5.1/powershell_7.5.1-1.deb_amd64.deb
+RUN dpkg -i powershell_7.5.1-1.deb_amd64.deb
+RUN apt-get install -f
+RUN rm powershell_7.5.1-1.deb_amd64.deb
+
+WORKDIR /src
+COPY ./ ./
+
+RUN pwsh ./DockerBuild.ps1 -Server 127.0.0.1 -database $MSSQL_DB_NAME -username sa -password $MSSQL_SA_PASSWORD
+
+# Paramerter Notes:
+# the "server" param does not change, in docker it is "localhost", or "." or "127.0.0.1"
+# the "database" name can be anything (DB, My_DB, Local_DB)
+# the "username" sa is needed by default
+# the "password" ca be anything since it is used inside the container only
+# entyrypoints:
+#    - DockerBuild.ps1 (create and upgrade)
+#    - CreateDatabase.ps1 (create only )
+#    - Upgrade.ps1 (upgrade only)

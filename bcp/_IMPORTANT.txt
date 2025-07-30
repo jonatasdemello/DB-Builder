@@ -1,0 +1,8 @@
+IMPORTANT
+
+Bcp files are sensitive to \r\n
+
+when we commit to Git it replaces the \r\n to \n
+
+we have to replace the \r\n in the fmt file and use "-r \n" or "-r 0x0A"
+

@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  mssql:
+    container_name: sql-server
+    build: .
+    ports:
+        - 1433:1433
+
+# use: docker-compose up
+# use: docker-compose up --build
